@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>사회 탐험대: 6개의 지역을 구하라</title>
+    <style>
+        /* =====================================================================
+           1. 디자인 시스템 & 기본 설정
+           ===================================================================== */
+        :root {
+            /* 지역별 테마 색상 */
+            --color-z1: #87CEEB; /* 1지역 하늘색 */
+            --color-z2: #4169E1; /* 2지역 파란색 */
+            --color-z3: #9ACD32; /* 3지역 연두색 */
+            --color-z4: #2E8B57; /* 4지역 초록색 */
+            --color-z5: #FFA500; /* 5지역 주황색 */
+            --color-z6: #FF69B4; /* 6지역 분홍색 */
+            --color-final: #8A2BE2; /* 최종 관문 보라색 */
+            
+            /* 공통 색상 */
+            --color-bg: #FDF5E6;
+            --color-text: #333;
+            --color-btn: #FFD700;
+            --color-btn-hover: #FFC107;
+            --color-correct: #4CAF50;
+            --color-wrong: #F44336;
+            --color-panel: rgba(255, 255, 255, 0.95);
+        }
+
+        * { box-sizing: border-box; user-select: none; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--color-bg);
+            background-image: url('assets/bg_start.png'); background-size: cover; background-position: center;
+            color: var(--color-text); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden;
+        }
+
+        /* 이미지 에러 시 대체 스타일 */
+        img { text-indent: -10000px; position: relative; }
+        img::after { 
+            content: attr(alt); display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #eee; border: 2px dashed #ccc; border-radius: 10px; text-indent: 0;
+            display: flex; justify-content: center; align-items: center; font-size: 0.8rem; color: #666; text-align: center;
+        }
+
+        /* 공통 화면 컨테이너 */
+        .screen {
+            display: none; width: 100%; height: 100%; max-width: 1200px; max-height: 800px; position: relative;
+            background: var(--color-panel); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); overflow: hidden;
+            flex-direction: column;
+        }
+        .screen.active { display: flex; animation: fadeIn 0.3s ease-out; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        /* 공통 버튼 디자인 */
+        .btn {
+            background-color: var(--color-btn); border: 3px solid #fff; border-radius: 15px; padding: 15px 30px;
+            font-size: 1.5rem; font-weight: bold; cursor: pointer; box-shadow: 0 6px 0 #D4AF37;
+            transition: all 0.1s; color: #333; display: inline-flex; justify-content: center; align-items: center; gap: 10px;
+        }
+        .btn:active { transform: translateY(6px); box-shadow: 0 0 0 #D4AF37; }
+        .btn:disabled { background-color: #ccc; box-shadow: 0 6px 0 #999; cursor: not-allowed; }
+        .btn-outline { background: #fff; border: 3px solid var(--color-btn); box-shadow: 0 6px 0 var(--color-btn); }
+        .btn-home { position: absolute; top: 20px; right: 20px; z-index: 50; padding: 10px 20px; font-size: 1.2rem; background: #eee; box-shadow: 0 4px 0 #ccc;}
+
+        /* 상단 헤더 바 */
+        .header-bar {
+            display: flex; justify-content: space-between; align-items: center; padding: 15px 30px;
+            background: rgba(255,255,255,0.8); border-bottom: 2px solid #eee; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .header-info { display: flex; gap: 20px; font-size: 1.2rem; font-weight: bold; align-items: center; }
+        .header-badge { background: #fff; padding: 5px 15px; border-radius: 20px; border: 2px solid #ddd; }
+
+        /* =====================================================================
+           2. 화면별 특화 스타일
+           ===================================================================== */
+        
+        /* 시작 화면 */
+        #start-screen { background: linear-gradient(135deg, #FFEFBA 0%, #FFFFFF 100%); align-items: center; justify-content: center; }
+        .main-title { font-size: 4.5rem; color: #2C3E50; text-shadow: 2px 2px 0 #fff, 4px 4px 0 #FFD700; margin-bottom: 40px; text-align: center; line-height: 1.2;}
+        .start-menu { display: flex; flex-direction: column; gap: 20px; width: 300px; }
+
+        /* 캐릭터 선택 화면 */
+        #char-screen { align-items: center; justify-content: center; background: #E0F7FA; }
+        .char-grid { display: flex; gap: 20px; margin: 30px 0; }
+        .char-card { width: 150px; height: 180px; background: #fff; border: 5px solid #ddd; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
+        .char-card img { width: 80px; height: 80px; margin-bottom: 10px; }
+        .char-card.selected { border-color: var(--color-btn); transform: scale(1.1); background: #FFFDE7; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .name-input { padding: 15px; font-size: 1.5rem; border: 3px solid #ddd; border-radius: 10px; text-align: center; width: 300px; margin-bottom: 30px; }
+
+        /* 메인 탐험 지도 화면 */
+        #map-screen { background-image: url('assets/exploration_map.png'); background-color: #E8F5E9; }
+        .map-container { flex-grow: 1; position: relative; padding: 20px; display: flex; flex-direction: column; justify-content: space-around; }
+        .zones-wrapper { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; padding: 20px; }
+        
+        .zone-node {
+            width: 160px; height: 160px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 1.2rem; cursor: pointer; position: relative; box-shadow: 0 10px 0 rgba(0,0,0,0.2); transition: 0.2s;
+            text-align: center; padding: 10px;
+        }
+        .zone-node:active:not(.locked) { transform: translateY(10px); box-shadow: 0 0 0 rgba(0,0,0,0.2); }
+        .zone-node.locked { filter: grayscale(100%); cursor: not-allowed; opacity: 0.7; }
+        .zone-node.unlocked { animation: pulse 2s infinite; }
+        .zone-node.cleared { opacity: 0.9; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
+        
+        .zone-icon { width: 50px; height: 50px; margin-bottom: 5px; font-size: 40px; }
+        .badge-icon { position: absolute; top: -10px; right: -10px; width: 40px; height: 40px; background: #fff; border-radius: 50%; border: 3px solid #333; display: flex; justify-content: center; align-items: center; font-size: 20px; }
+        
+        /* 메인 하단 유틸리티 */
+        .map-footer { display: flex; justify-content: center; gap: 20px; padding: 20px; background: rgba(255,255,255,0.7); border-top: 2px solid #ddd; }
+
+        /* 퀴즈 공통 레이아웃 */
+        #quiz-screen { background: #f9f9f9; }
+        .quiz-container { flex-grow: 1; padding: 30px; display: flex; flex-direction: column; overflow-y: auto; }
+        .quiz-stage-title { font-size: 1.2rem; color: #666; margin-bottom: 10px; text-align: center; }
+        .quiz-question { font-size: 1.8rem; font-weight: bold; margin-bottom: 30px; text-align: center; line-height: 1.4; word-break: keep-all; }
+        
+        /* 객관식 & OX 버튼 영역 */
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 800px; margin: 0 auto; width: 100%; }
+        .option-btn {
+            background: #fff; border: 3px solid #ddd; padding: 20px; font-size: 1.5rem; border-radius: 15px; cursor: pointer;
+            transition: 0.1s; display: flex; align-items: center; justify-content: center; text-align: center; word-break: keep-all; min-height: 80px;
+        }
+        .option-btn:hover { background: #f0f0f0; border-color: #ccc; }
+        .option-btn:active { transform: scale(0.98); }
+        
+        /* 분류 문제 (Categorize) UI */
+        .cat-container { display: flex; flex-direction: column; gap: 20px; align-items: center; }
+        .cat-items { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        .cat-item { padding: 10px 20px; background: #fff; border: 2px solid #999; border-radius: 20px; font-size: 1.2rem; cursor: pointer; }
+        .cat-item.selected { background: #FFD700; border-color: #D4AF37; transform: scale(1.1); font-weight: bold; }
+        .cat-boxes { display: flex; gap: 20px; width: 100%; justify-content: center; }
+        .cat-box { flex: 1; max-width: 300px; min-height: 150px; background: #eee; border: 3px dashed #aaa; border-radius: 15px; padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; }
+        .cat-box-title { font-weight: bold; font-size: 1.3rem; margin-bottom: 10px; pointer-events: none;}
+        .cat-item-placed { padding: 5px 15px; background: #fff; border: 1px solid #ccc; border-radius: 10px; font-size: 1.1rem; width: 100%; text-align: center;}
+
+        /* 순서 배열 문제 (Sequence) UI */
+        .seq-container { display: flex; flex-direction: column; gap: 10px; max-width: 600px; margin: 0 auto; width: 100%; }
+        .seq-item { display: flex; align-items: center; background: #fff; border: 2px solid #ddd; border-radius: 10px; padding: 10px 20px; font-size: 1.3rem; }
+        .seq-content { flex-grow: 1; }
+        .seq-controls { display: flex; gap: 5px; }
+        .seq-btn { padding: 10px 15px; font-size: 1.2rem; cursor: pointer; border: none; border-radius: 5px; background: #eee; }
+
+        /* 모달 팝업 (피드백/결과) */
+        .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: #fff; width: 90%; max-width: 600px; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-height: 90vh; overflow-y: auto;}
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        .modal-title { font-size: 2rem; font-weight: bold; margin-bottom: 20px; }
+        .modal-text { font-size: 1.3rem; line-height: 1.6; margin-bottom: 30px; word-break: keep-all; text-align: left;}
+        
+        .feedback-correct { color: var(--color-correct); }
+        .feedback-wrong { color: var(--color-wrong); }
+        .feedback-hint { background: #FFF9C4; padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #FBC02D; text-align: left; font-size: 1.2rem;}
+
+        /* 결과 화면 & 수료증 */
+        #result-screen, #certificate-screen { background: #f0f8ff; overflow-y: auto; padding: 20px;}
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }
+        .stat-card { background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+        .stat-card h3 { color: #666; margin: 0 0 10px 0; font-size: 1.1rem; }
+        .stat-card p { font-size: 2rem; font-weight: bold; margin: 0; color: #333; }
+        
+        .cert-wrap { border: 20px solid #D4AF37; padding: 40px; background: url('assets/certificate_bg.png') center/cover, #fff; border-radius: 10px; text-align: center; max-width: 900px; margin: 0 auto;}
+        .cert-title { font-size: 3.5rem; color: #2C3E50; margin-bottom: 20px; }
+        .cert-name { font-size: 2.5rem; font-weight: bold; color: #B22222; margin: 30px 0; border-bottom: 2px solid #333; display: inline-block; padding: 0 50px 10px; }
+        
+        /* 복습소 화면 */
+        #review-screen { background: #FFF3E0; }
+        .review-list { display: flex; flex-direction: column; gap: 10px; padding: 20px; overflow-y: auto; flex-grow: 1; }
+        .review-item { background: #fff; padding: 15px; border-radius: 10px; border-left: 5px solid var(--color-wrong); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);}
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .main-title { font-size: 3rem; }
+            .zones-wrapper { gap: 15px; }
+            .zone-node { width: 120px; height: 120px; font-size: 1rem; }
+            .quiz-question { font-size: 1.4rem; }
+            .option-btn { font-size: 1.2rem; padding: 15px; min-height: 60px;}
+            .options-grid { grid-template-columns: 1fr; }
+        }
+
+        /* 인쇄 스타일 */
+        @media print {
+            body * { visibility: hidden; }
+            #certificate-screen, #certificate-screen * { visibility: visible; }
+            #certificate-screen { position: absolute; left: 0; top: 0; width: 100%; height: 100%; padding: 0; background: none; }
+            .btn { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- =======================================================================
+         화면 1: 시작 화면
+         ======================================================================= -->
+    <div id="start-screen" class="screen active">
+        <h1 class="main-title">🌍 사회 탐험대 🌍<br><span style="font-size: 3rem; color:#4169E1;">6개의 지역을 구하라</span></h1>
+        <img src="assets/exploration_map.png" alt="탐험 지도" style="width: 300px; height: 200px; object-fit: contain; margin-bottom: 30px;" onerror="this.style.display='none'">
+        
+        <div class="start-menu">
+            <button class="btn" onclick="goCharSelect()">🚩 탐험 시작</button>
+            <button class="btn btn-outline" id="btn-continue" onclick="loadGame()" style="display:none;">▶ 이어하기</button>
+            <button class="btn btn-outline" onclick="showHowToPlay()">📖 게임 방법</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-outline" style="flex:1; font-size:1rem; padding:10px;" onclick="toggleSound()">🔊 소리: <span id="sound-status">켜짐</span></button>
+                <button class="btn btn-outline" style="flex:1; font-size:1rem; padding:10px; background:#ffebee;" onclick="resetSaveData()">🗑️ 기록 초기화</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         화면 2: 캐릭터 선택 화면
+         ======================================================================= -->
+    <div id="char-screen" class="screen">
+        <button class="btn-home" onclick="goHome()">🏠 처음으로</button>
+        <h2 style="font-size: 2.5rem; text-align: center; margin-top: 50px;">나만의 탐험대원을 만들어주세요!</h2>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <input type="text" id="input-name" class="name-input" placeholder="이름이나 별명 입력" maxlength="8">
+        </div>
+
+        <div class="char-grid">
+            <div class="char-card" onclick="selectChar('rabbit')">
+                <div style="font-size:4rem;">🐰</div>
+                <div style="font-weight:bold;">나침반 토끼</div>
+            </div>
+            <div class="char-card" onclick="selectChar('bear')">
+                <div style="font-size:4rem;">🐻</div>
+                <div style="font-weight:bold;">기록 수첩 곰</div>
+            </div>
+            <div class="char-card" onclick="selectChar('cat')">
+                <div style="font-size:4rem;">🐱</div>
+                <div style="font-weight:bold;">돋보기 고양이</div>
+            </div>
+            <div class="char-card" onclick="selectChar('fox')">
+                <div style="font-size:4rem;">🦊</div>
+                <div style="font-weight:bold;">보물 지도 여우</div>
+            </div>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="btn" style="width: 200px;" onclick="startNewGame()">출발! 🚀</button>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         화면 3: 메인 탐험 지도 화면
+         ======================================================================= -->
+    <div id="map-screen" class="screen">
+        <button class="btn-home" onclick="goHome()">🏠 홈</button>
+        <div class="header-bar">
+            <div class="header-info">
+                <span id="ui-char-icon" style="font-size: 2rem;">🐰</span>
+                <span id="ui-player-name">탐험대원</span>
+            </div>
+            <div class="header-info">
+                <div class="header-badge">💯 <span id="ui-score">0</span>점</div>
+                <div class="header-badge">⭐ <span id="ui-stars">0</span></div>
+            </div>
+            <div class="header-info">
+                <div class="header-badge">🏅 배지: <span id="ui-badges">0</span>/6</div>
+                <div class="header-badge">🧩 조각: <span id="ui-pieces">0</span>/6</div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <h2 style="text-align: center; background:rgba(255,255,255,0.8); padding:10px; border-radius:10px; width: fit-content; margin: 0 auto;">🗺️ 사회 탐험 지도</h2>
+            <div class="zones-wrapper" id="zones-container">
+                <!-- JS에서 동적 생성됨 -->
+            </div>
+        </div>
+
+        <div class="map-footer">
+            <button class="btn btn-outline" style="background: #FFF3E0; border-color:#FF9800;" onclick="openReviewStation()">
+                📝 틀린 문제 복습소 (<span id="ui-wrong-count" style="color:red; font-weight:bold;">0</span>)
+            </button>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         화면 4: 퀴즈 화면 (다목적)
+         ======================================================================= -->
+    <div id="quiz-screen" class="screen">
+        <button class="btn-home" onclick="confirmExitQuiz()">🏠 중단하기</button>
+        <div class="header-bar" style="background:#f0f0f0;">
+            <div class="header-info" style="color:#666;"><span id="quiz-zone-name">1지역</span> 탐험 중...</div>
+            <div class="header-info">
+                진행: <span id="quiz-progress-text">1/9</span>
+            </div>
+        </div>
+
+        <div class="quiz-container">
+            <div class="quiz-stage-title" id="quiz-stage">1단계: 빠른 퀴즈</div>
+            <div class="quiz-question" id="quiz-q-text">여기에 문제가 표시됩니다.</div>
+            
+            <!-- 문제 유형별 동적 영역 -->
+            <div id="quiz-content-area" style="width: 100%; display: flex; justify-content: center;">
+                <!-- 버튼, 분류박스, 순서리스트 등이 렌더링됨 -->
+            </div>
+
+            <!-- 하단 확인 버튼 (분류, 순서 등에서 사용) -->
+            <div style="text-align: center; margin-top: 30px;">
+                <button id="btn-submit-quiz" class="btn" style="display:none; width:200px;" onclick="checkInteractiveAnswer()">제출하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         화면 5: 틀린 문제 복습소 화면
+         ======================================================================= -->
+    <div id="review-screen" class="screen">
+        <button class="btn-home" onclick="showScreen('map-screen')">✖ 닫기</button>
+        <div class="header-bar" style="background:#FFE0B2;">
+            <h2>📝 틀린 문제 복습소</h2>
+            <div style="font-size:1.2rem;">남은 복습: <strong id="review-remain" style="color:red;">0</strong>문제</div>
+        </div>
+        
+        <div class="review-list" id="review-list-container">
+            <!-- JS로 동적 생성 -->
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         화면 6: 결과 & 수료증 화면
+         ======================================================================= -->
+    <div id="result-screen" class="screen">
+        <h1 class="main-title" style="margin-top:20px; margin-bottom:10px;">🎉 탐험 완료! 🎉</h1>
+        <h2 style="text-align: center; color:var(--color-z2);" id="res-title">사회 탐험 대장</h2>
+        
+        <div class="stat-grid" style="max-width: 900px; margin: 20px auto;">
+            <div class="stat-card"><h3>내 이름</h3><p id="res-name" style="font-size:1.5rem;">탐험대원</p></div>
+            <div class="stat-card"><h3>총점</h3><p id="res-score">0</p></div>
+            <div class="stat-card"><h3>획득한 별</h3><p>⭐ <span id="res-stars">0</span></p></div>
+            <div class="stat-card"><h3>전체 정답률</h3><p id="res-rate">0%</p></div>
+            <div class="stat-card"><h3>최고의 지역</h3><p id="res-best" style="font-size:1.2rem; margin-top:10px;">-</p></div>
+            <div class="stat-card"><h3>복습 권장 지역</h3><p id="res-worst" style="font-size:1.2rem; margin-top:10px;">-</p></div>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 20px; margin-top: 30px;">
+            <button class="btn" onclick="showScreen('certificate-screen')">📜 수료증 보기</button>
+            <button class="btn btn-outline" onclick="openReviewStation()">📝 틀린 문제 풀기</button>
+            <button class="btn btn-outline" onclick="goHome()">🏠 홈으로</button>
+        </div>
+    </div>
+
+    <div id="certificate-screen" class="screen">
+        <button class="btn-home" onclick="showScreen('result-screen')">🔙 뒤로</button>
+        <button class="btn" style="position: absolute; top: 20px; left: 20px; z-index: 50; padding: 10px; font-size:1.2rem;" onclick="window.print()">🖨️ 인쇄하기</button>
+        
+        <div style="flex-grow:1; display:flex; align-items:center; justify-content:center; padding: 20px;">
+            <div class="cert-wrap">
+                <h1 class="cert-title">사회 탐험대 수료증</h1>
+                <div class="cert-name" id="cert-name">탐험대원</div>
+                <div style="font-size: 1.8rem; line-height: 1.8; color: #444; margin-bottom: 40px; word-break: keep-all;">
+                    위 탐험대원은 4학년 1학기 사회 내용을<br>
+                    우수한 성적으로 탐험하고 모든 미션을 해결하였기에<br>
+                    <strong style="color:var(--color-z2);" id="cert-title-text">사회 탐험 대장</strong> 칭호와 함께 이 수료증을 수여합니다.
+                </div>
+                <div style="display:flex; justify-content:space-around; font-size: 1.2rem; background:#f9f9f9; padding:15px; border-radius:10px; margin-bottom:20px;">
+                    <div>총점: <strong id="cert-score">0</strong>점</div>
+                    <div>정답률: <strong id="cert-rate">0</strong>%</div>
+                    <div>획득 배지: <strong id="cert-badges">0</strong>개</div>
+                </div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #2C3E50;">
+                    2026년 사회 탐험 본부
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         공통 모달 팝업
+         ======================================================================= -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="modal-title" class="modal-title">알림</div>
+            <div id="modal-body" class="modal-text">내용이 들어갑니다.</div>
+            <div style="display:flex; justify-content:center; gap:15px; margin-top:20px;" id="modal-btns">
+                <button class="btn" onclick="closeModal()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* =====================================================================
+           21. 교사용 수정 편의 기능 (GAME_CONFIG)
+           ===================================================================== */
+        const GAME_CONFIG = {
+            // 지역당 문제 구성 설정 (합이 questionsPerZone과 일치해야 함)
+            quickQuestions: 4,      // 1단계: 객관식, OX 위주
+            activityQuestions: 2,   // 2단계: 분류, 순서 배열
+            situationQuestions: 1,  // 3단계: 상황 해결
+            gateQuestions: 2,       // 4단계: 관문(종합)
+            questionsPerZone: 9,    // 지역당 총 문제 수 (4+2+1+2)
+            
+            passRate: 70,           // 지역 통과 기준 정답률(%)
+            finalQuestionCount: 8,  // 최종 관문 문제 수
+            soundEnabled: true      // 초기 효과음 설정
+            
+            /* * [문제 추가 방법]
+             * 아래 'questionBank' 배열에 객체 형식으로 문제를 추가하세요.
+             * 필수 속성: id(고유값), zone(1~6, 7=최종), stage('quick','activity','situation','gate'), 
+             * type('mcq','ox','categorize','sequence'), question, options/items, answer, exp(해설), hint(힌트)
+             */
+        };
+
+        /* =====================================================================
+           9. 문제은행 데이터 (최소 90문제 이상 구성)
+           ===================================================================== */
+        // 타입: 'mcq'(4지선다), 'ox', 'categorize'(분류), 'sequence'(순서), 'situation'(상황-mcq형태)
+        const questionBank = [
+            // --- 1지역: 지도 연구소 ---
+            { id:"1_q1", zone:1, stage:"quick", type:"mcq", question:"지도에서 실제 거리를 줄여서 나타낸 비율을 무엇이라고 하나요?", options:["방위표", "기호", "등고선", "축척"], answer:3, exp:"실제 거리를 줄인 비율은 '축척'입니다.", hint:"지도에 자 모양으로 표시된 것을 생각해보세요." },
+            { id:"1_q2", zone:1, stage:"quick", type:"ox", question:"지도에서 방위표가 없으면 위쪽을 항상 북쪽으로 봅니다.", options:["O","X"], answer:0, exp:"방위표가 없을 때는 지도의 위쪽이 북쪽입니다.", hint:"지도를 볼 때의 기본 약속입니다." },
+            { id:"1_q3", zone:1, stage:"quick", type:"mcq", question:"지도에서 학교나 병원 등을 간단히 나타낸 그림은?", options:["기호", "범례", "축척", "등고선"], answer:0, exp:"알아보기 쉽게 간단히 그린 것을 '기호'라고 합니다.", hint:"십자가, 책 모양 등을 생각해보세요." },
+            { id:"1_q4", zone:1, stage:"quick", type:"mcq", question:"기호들의 뜻을 모아 설명해 놓은 것은 무엇인가요?", options:["방위", "축척", "등고선", "범례"], answer:3, exp:"기호의 의미를 표로 정리한 것을 '범례'라고 합니다.", hint:"지도 구석에 있는 표를 떠올려보세요." },
+            { id:"1_q5", zone:1, stage:"quick", type:"ox", question:"등고선의 간격이 넓은 곳은 경사가 급한 곳입니다.", options:["O","X"], answer:1, exp:"간격이 넓으면 경사가 완만하고, 좁으면 경사가 급합니다.", hint:"선이 빽빽하게 모여있으면 오르기 힘든 곳입니다." },
+            { id:"1_q6", zone:1, stage:"quick", type:"mcq", question:"디지털 영상 지도의 장점이 아닌 것은?", options:["확대와 축소가 자유롭다", "여러 정보를 겹쳐 볼 수 있다", "인터넷이 없어도 항상 볼 수 있다", "길 찾기 기능이 있다"], answer:2, exp:"스마트폰 등 기기와 인터넷 연결이 필요할 때가 많습니다.", hint:"스마트폰 지도를 산속에서 쓸 때를 생각해보세요." },
+            { id:"1_q7", zone:1, stage:"activity", type:"categorize", question:"다음 중 지도에서 위치나 거리를 알 수 있게 해주는 것과 높낮이를 알게 해주는 것을 분류하세요.", categories:["위치/거리 알기", "높낮이 알기"], items:[{text:"방위표", c:0}, {text:"축척", c:0}, {text:"등고선", c:1}, {text:"색깔(지도 바탕)", c:1}], exp:"방위와 축척은 위치/거리, 등고선과 색깔은 높낮이를 나타냅니다.", hint:"산의 높이를 표현하는 방법을 생각하세요." },
+            { id:"1_q8", zone:1, stage:"activity", type:"categorize", question:"종이 지도와 디지털 지도의 특징을 분류하세요.", categories:["종이 지도", "디지털 지도"], items:[{text:"접어서 보관", c:0}, {text:"건물 모습 입체로 보기", c:1}, {text:"현재 내 위치 확인", c:1}, {text:"전체 모습 한눈에 보기 편함", c:0}], exp:"디지털 지도는 입체, 위치 추적 등 다양한 기능이 있습니다.", hint:"스마트폰 지도의 편리한 점을 골라보세요." },
+            { id:"1_q9", zone:1, stage:"situation", type:"mcq", question:"가족과 주말에 산에 오르려고 합니다. 지도에서 경사가 완만하여 오르기 쉬운 길을 찾으려면 무엇을 봐야 할까요?", options:["기호가 많은 곳", "방위표가 동쪽인 곳", "등고선 간격이 좁은 곳", "등고선 간격이 넓은 곳"], answer:3, exp:"등고선 간격이 넓어야 길이 완만합니다.", hint:"선과 선 사이가 널찍한 곳이 덜 가파릅니다." },
+            { id:"1_q10", zone:1, stage:"situation", type:"mcq", question:"처음 가는 도서관을 찾아가려고 합니다. 스마트폰 지도를 켰을 때 가장 유용한 기능은?", options:["길 찾기(경로 탐색) 기능", "지형도 보기", "위성 사진 보기", "과거 사진 보기"], answer:0, exp:"목적지까지 가는 방법을 알려주는 길 찾기 기능이 가장 유용합니다.", hint:"목적지까지 어떻게 가야 할지 알려주는 기능을 고르세요." },
+            { id:"1_q11", zone:1, stage:"gate", type:"mcq", question:"지도에서 땅의 높낮이를 나타내는 두 가지 방법은 등고선과 무엇인가요?", options:["기호", "색깔", "축척", "범례"], answer:1, exp:"등고선과 함께 색깔(예: 초록색은 평지, 갈색은 산)로 높낮이를 나타냅니다.", hint:"지도의 바다는 파란색, 산은 갈색인 이유를 생각하세요." },
+            { id:"1_q12", zone:1, stage:"gate", type:"ox", question:"축척을 이용하면 지도상의 거리로 실제 거리를 계산할 수 있다.", options:["O","X"], answer:0, exp:"축척은 줄인 비율이므로 반대로 계산하면 실제 거리가 나옵니다.", hint:"지도에서 1cm가 실제 1km를 의미한다면 계산이 가능합니다." },
+            { id:"1_q13", zone:1, stage:"quick", type:"mcq", question:"지도는 위에서 내려다본 모습을 그린 것입니다. 이를 무엇이라고 하나요?", options:["평면도", "입체도", "단면도", "측면도"], answer:0, exp:"위에서 내려다보고 평평하게 그린 그림입니다.", hint:"새가 하늘에서 땅을 내려다본 모습을 상상하세요." },
+            { id:"1_q14", zone:1, stage:"activity", type:"sequence", question:"지도에서 원하는 장소(시청)를 찾는 순서를 맞게 배열하세요.", items:["지도를 펼친다", "범례에서 시청 기호를 확인한다", "지도에서 시청 기호를 찾는다", "방위표를 보고 시청의 방향을 파악한다"], answer:[0,1,2,3], exp:"지도 준비 -> 기호 뜻 확인 -> 기호 찾기 -> 방향 파악 순서가 적절합니다.", hint:"가장 먼저 무엇이 의미하는지 알아야 지도에서 찾을 수 있습니다." },
+            { id:"1_q15", zone:1, stage:"gate", type:"mcq", question:"다음 중 기호와 뜻이 바르게 연결된 것은? (상상해서 풀어보세요)", options:["비행기 그림 - 기차역", "책 그림 - 학교", "십자가 그림 - 우체국", "온천 마크 - 경찰서"], answer:1, exp:"보통 책모양은 학교, 십자가는 병원, 비행기는 공항입니다.", hint:"그 장소에서 가장 많이 쓰거나 대표하는 물건을 생각하세요." },
+
+            // --- 2지역: 우리 지역 관측소 ---
+            { id:"2_q1", zone:2, stage:"quick", type:"mcq", question:"어떤 지역의 따뜻하고 추운 정도를 숫자로 나타낸 것을 무엇이라고 하나요?", options:["강수량", "기온", "바람", "지형"], answer:1, exp:"온도를 나타내는 것은 '기온'입니다.", hint:"온도계로 재는 것을 생각해보세요." },
+            { id:"2_q2", zone:2, stage:"quick", type:"ox", question:"일정 기간 동안 어떤 지역에 내린 비와 눈의 양을 합친 것을 강수량이라고 한다.", options:["O","X"], answer:0, exp:"비(강우)와 눈(강설) 등을 모두 합쳐 강수량이라고 합니다.", hint:"하늘에서 내린 물의 총량을 뜻합니다." },
+            { id:"2_q3", zone:2, stage:"quick", type:"mcq", question:"들이 넓고 교통이 편리하여 사람들이 많이 모여 사는 곳은 주로 어떤 지형인가요?", options:["산지", "평야", "해안", "계곡"], answer:1, exp:"넓고 평평한 '평야'에 도시가 발달하고 인구가 많습니다.", hint:"농사짓기도 편하고 건물 짓기도 편한 곳입니다." },
+            { id:"2_q4", zone:2, stage:"quick", type:"mcq", question:"우리 지역의 위치를 친구에게 설명할 때 기준으로 삼기 좋은 것은?", options:["지나가는 버스", "구름의 위치", "지역을 둘러싼 큰 산과 강", "주차된 자동차"], answer:2, exp:"위치를 설명할 때는 움직이거나 변하지 않는 자연환경 등을 기준으로 합니다.", hint:"항상 그 자리에 변함없이 있는 것을 골라야 합니다." },
+            { id:"2_q5", zone:2, stage:"quick", type:"ox", question:"지역마다 산, 강, 바다 등 자연환경이 다르기 때문에 사람들의 생활 모습도 다릅니다.", options:["O","X"], answer:0, exp:"자연환경(지형, 기후)은 지역 사람들의 의식주와 직업에 큰 영향을 줍니다.", hint:"바닷가 사람과 산속 사람의 밥상을 비교해보세요." },
+            { id:"2_q6", zone:2, stage:"quick", type:"mcq", question:"인구가 가장 많이 밀집(모여 있는)하는 지역의 특징은?", options:["높고 험한 산이 많다", "일자리와 편의시설이 많다", "교통이 매우 불편하다", "농사를 짓는 땅만 넓다"], answer:1, exp:"일자리, 병원, 학교, 마트 등이 많은 곳(도시)에 인구가 집중됩니다.", hint:"사람들이 살기 편한 조건을 생각해보세요." },
+            { id:"2_q7", zone:2, stage:"activity", type:"categorize", question:"지역의 특징을 자연환경과 인문환경으로 분류하세요.", categories:["자연환경", "인문환경(사람이 만든 것)"], items:[{text:"태백산맥", c:0}, {text:"낙동강", c:0}, {text:"고속도로", c:1}, {text:"대규모 아파트단지", c:1}], exp:"산, 강 등은 자연환경, 도로나 건물은 사람이 만든 인문환경입니다.", hint:"자연 그대로의 것과 사람이 필요해서 만든 것을 구분하세요." },
+            { id:"2_q8", zone:2, stage:"activity", type:"categorize", question:"주로 발달하는 산업을 지형에 맞게 분류하세요.", categories:["평야 지역", "해안(바닷가) 지역"], items:[{text:"벼농사", c:0}, {text:"수산업(물고기 잡기)", c:1}, {text:"염전(소금 만들기)", c:1}, {text:"비닐하우스 채소농사", c:0}], exp:"평야는 농업, 해안은 수산업과 관련된 활동이 많습니다.", hint:"물이 필요한지, 넓은 땅이 필요한지 생각하세요." },
+            { id:"2_q9", zone:2, stage:"situation", type:"mcq", question:"다른 지역에 사는 친구에게 우리 지역을 소개하려고 합니다. 가장 적절한 내용은?", options:["우리 지역은 어제 비가 왔어.", "우리 지역은 바다와 접해 있고 해산물이 유명해.", "우리 지역에는 우리 집이 있어.", "우리 지역은 바람이 불 때가 있어."], answer:1, exp:"지역을 소개할 때는 그 지역만의 대표적인 지형이나 특산물을 말하는 것이 좋습니다.", hint:"그 지역만의 특별하고 변하지 않는 특징을 말해야 합니다." },
+            { id:"2_q10", zone:2, stage:"situation", type:"mcq", question:"지도에서 인구가 많이 모인 곳을 찾고 싶습니다. 어떤 지도를 보는 것이 가장 좋을까요?", options:["등고선이 그려진 지형도", "지역별 인구수를 색깔로 나타낸 지도", "문화유산이 표시된 지도", "관광 안내 지도"], answer:1, exp:"인구 분포나 밀도를 색깔이나 점으로 나타낸 주제도가 필요합니다.", hint:"내가 찾고 싶은 정보가 직접 그려져 있는 지도를 선택하세요." },
+            { id:"2_q11", zone:2, stage:"gate", type:"mcq", question:"기온이 높고 비가 많이 오는 지역 사람들의 생활 모습으로 알맞은 것은?", options:["두꺼운 털옷을 입는다.", "집의 지붕을 평평하게 만든다.", "바람이 잘 통하게 집을 짓는다.", "난방 시설을 아주 크게 만든다."], answer:2, exp:"덥고 습한 기후에서는 시원하게 지내기 위해 통풍을 중요시합니다.", hint:"여름에 덥고 비가 많이 올 때 어떻게 지내는지 생각해보세요." },
+            { id:"2_q12", zone:2, stage:"gate", type:"ox", question:"두 지역을 비교할 때는 자연환경만 비교해야 정확한 특징을 알 수 있다.", options:["O","X"], answer:1, exp:"자연환경뿐만 아니라 인문환경(인구, 산업, 시설 등)도 함께 비교해야 합니다.", hint:"사람들이 어떻게 살고 있는지도 중요한 특징입니다." },
+            { id:"2_q13", zone:2, stage:"quick", type:"mcq", question:"우리나라의 여름 기후 특징으로 가장 알맞은 것은?", options:["춥고 눈이 많이 온다.", "덥고 비가 많이 온다.", "시원하고 건조하다.", "따뜻하고 비가 거의 안 온다."], answer:1, exp:"우리나라 여름은 덥고 장마, 태풍 등으로 비가 많이 옵니다.", hint:"여름 방학 때의 날씨를 떠올려보세요." },
+            { id:"2_q14", zone:2, stage:"activity", type:"sequence", question:"우리 지역을 조사하는 과정을 순서대로 맞추세요.", items:["조사 주제 정하기", "조사 방법 정하기", "직접 찾아가거나 인터넷으로 조사하기", "조사 결과 정리하여 발표하기"], answer:[0,1,2,3], exp:"주제->방법->실제 조사->정리 및 발표의 순서로 진행됩니다.", hint:"무엇을 조사할지 먼저 정해야 합니다." },
+            { id:"2_q15", zone:2, stage:"gate", type:"mcq", question:"지형과 기후를 합쳐서 부르는 말은 무엇인가요?", options:["인문환경", "사회환경", "자연환경", "생활환경"], answer:2, exp:"산, 강(지형)과 기온, 강수량(기후) 등을 자연환경이라고 합니다.", hint:"사람이 만들지 않은 자연 그대로의 조건을 뜻하는 말입니다." },
+
+            // --- 3지역: 국가유산 박물관 ---
+            { id:"3_q1", zone:3, stage:"quick", type:"mcq", question:"건축물, 탑, 책처럼 형태가 있어 눈으로 볼 수 있는 국가유산은?", options:["무형유산", "유형유산", "자연유산", "기념물"], answer:1, exp:"형태가 있는(있을 유, 형태 형) 유산을 '유형유산'이라고 합니다.", hint:"손으로 만질 수 있고 형태가 유지되는 것입니다." },
+            { id:"3_q2", zone:3, stage:"quick", type:"ox", question:"판소리나 탈춤 등 형태가 없는 기술이나 예술은 국가유산이 될 수 없다.", options:["O","X"], answer:1, exp:"형태가 없는 무형유산(무형문화재)도 훌륭한 국가유산입니다.", hint:"사람의 기술이나 재능으로 전해지는 것도 소중한 유산입니다." },
+            { id:"3_q3", zone:3, stage:"quick", type:"mcq", question:"국가유산을 조사하는 방법 중 현장에 직접 찾아가서 보고 듣는 방법은?", options:["면담 조사", "문헌 조사", "답사(현장 조사)", "설문 조사"], answer:2, exp:"현장에 직접 가서 조사하는 것을 '답사' 또는 '현장 체험 학습'이라고 합니다.", hint:"발로 직접 뛰어가서 눈으로 확인하는 방법입니다." },
+            { id:"3_q4", zone:3, stage:"quick", type:"mcq", question:"조상들이 물려준 훌륭한 문화유산을 보호해야 하는 까닭은?", options:["외국에 비싸게 팔기 위해서", "조상들의 지혜와 문화를 후손에게 물려주기 위해서", "새로운 건물을 짓지 않기 위해서", "숙제를 빨리 끝내기 위해서"], answer:1, exp:"우리의 정체성과 역사가 담겨 있기 때문에 잘 보존하여 물려주어야 합니다.", hint:"부모님께 받은 소중한 선물을 동생에게 물려주는 것과 같습니다." },
+            { id:"3_q5", zone:3, stage:"quick", type:"ox", question:"국가유산을 관람할 때는 유물을 만지거나 낙서를 해서는 안 됩니다.", options:["O","X"], answer:0, exp:"유물이 훼손될 수 있으므로 눈으로만 보고 아껴야 합니다.", hint:"오래된 물건은 쉽게 망가질 수 있습니다." },
+            { id:"3_q6", zone:3, stage:"quick", type:"mcq", question:"우리 지역의 국가유산을 알리는 방법으로 적절하지 않은 것은?", options:["안내 포스터 만들기", "홍보 동영상 제작하기", "나 혼자만 알고 있기", "소개하는 글 써서 게시판에 붙이기"], answer:2, exp:"소중한 유산은 여러 사람에게 널리 알려 함께 아끼는 것이 좋습니다.", hint:"좋은 것은 널리 알리는 것이 올바른 태도입니다." },
+            { id:"3_q7", zone:3, stage:"activity", type:"categorize", question:"다음 국가유산들을 유형유산과 무형유산으로 분류하세요.", categories:["유형유산 (형태가 있음)", "무형유산 (형태가 없음)"], items:[{text:"첨성대(건축물)", c:0}, {text:"강강술래(놀이)", c:1}, {text:"팔만대장경(책/목판)", c:0}, {text:"한산모시짜기(기술)", c:1}], exp:"건축물과 물건은 유형유산, 기술과 예술, 놀이는 무형유산입니다.", hint:"창고에 보관할 수 있는 물건인지 생각해보세요." },
+            { id:"3_q8", zone:3, stage:"activity", type:"categorize", question:"국가유산 조사 방법을 특징에 맞게 분류하세요.", categories:["직접 가서 보기(답사)", "자료 찾아보기"], items:[{text:"박물관 견학", c:0}, {text:"도서관에서 책 읽기", c:1}, {text:"인터넷 누리집 검색", c:1}, {text:"유적지 방문하기", c:0}], exp:"답사는 현장에 가는 것, 자료 조사는 책이나 인터넷을 이용하는 것입니다.", hint:"몸이 이동해야 하는지, 앉아서 할 수 있는지 구분하세요." },
+            { id:"3_q9", zone:3, stage:"situation", type:"mcq", question:"박물관에 가서 도자기를 관람하고 있습니다. 올바른 행동은?", options:["플래시를 터뜨리며 사진을 마구 찍는다.", "유리창에 기대어 큰 소리로 떠든다.", "안내문을 읽으며 조용히 눈으로 감상한다.", "도자기를 만져보기 위해 전시장을 넘는다."], answer:2, exp:"박물관에서는 유물 보호와 다른 관람객을 위해 정숙하고 규칙을 지켜야 합니다.", hint:"공공장소이자 귀한 물건이 있는 곳에서의 예절을 생각하세요." },
+            { id:"3_q10", zone:3, stage:"situation", type:"mcq", question:"우리 지역의 무형유산인 '전통 춤'에 대해 자세히 알고 싶습니다. 가장 좋은 방법은?", options:["전통 춤을 추시는 전수자(전문가) 할아버지를 찾아가 면담한다.", "건축물 사진만 많이 찍어온다.", "친구의 상상 이야기를 듣는다.", "지도에서 산의 위치를 찾는다."], answer:0, exp:"무형유산은 그 기술을 가진 사람(인간문화재 등)을 면담하는 것이 가장 확실합니다.", hint:"사람이 가진 기술이므로 그 사람에게 직접 듣는 것이 좋습니다." },
+            { id:"3_q11", zone:3, stage:"gate", type:"mcq", question:"국가유산을 통해 우리가 알 수 있는 것은 무엇인가요?", options:["미래에 일어날 일", "조상들의 생활 모습과 지혜", "현재 유행하는 게임", "다른 나라의 기후"], answer:1, exp:"국가유산에는 그것을 만들고 사용했던 조상들의 생각과 생활이 담겨 있습니다.", hint:"과거에서 온 편지와 같은 역할을 합니다." },
+            { id:"3_q12", zone:3, stage:"gate", type:"ox", question:"아주 오래된 옛날 물건만 국가유산이 될 수 있고, 근대(비교적 최근)의 건축물은 유산이 될 수 없다.", options:["O","X"], answer:1, exp:"오래되지 않았더라도 역사적, 예술적 가치가 높으면 국가유산으로 지정하여 보호합니다.", hint:"가치가 중요하지, 무조건 나이만 따지는 것은 아닙니다." },
+            { id:"3_q13", zone:3, stage:"quick", type:"mcq", question:"우리 지역의 국가유산을 안내하는 안내도에 꼭 들어가야 할 내용이 아닌 것은?", options:["국가유산의 이름", "국가유산의 위치", "국가유산의 가치와 설명", "내가 가장 좋아하는 음식 메뉴"], answer:3, exp:"안내도에는 방문객을 위한 유산의 정보와 위치가 들어가야 합니다.", hint:"관광객이 무엇을 궁금해할지 생각해보세요." },
+            { id:"3_q14", zone:3, stage:"activity", type:"sequence", question:"답사(현장 체험 학습)를 가는 순서를 맞게 배열하세요.", items:["답사 계획 세우기", "답사 현장 방문하여 조사하기", "새롭게 알게 된 점 정리하기", "조사 결과 발표하기"], answer:[0,1,2,3], exp:"계획 -> 실행(방문) -> 정리 -> 발표의 순서가 일반적입니다.", hint:"무작정 가기 전에 먼저 할 일이 있습니다." },
+            { id:"3_q15", zone:3, stage:"gate", type:"mcq", question:"천연기념물이나 명승과 같이 자연 그대로의 모습이 뛰어난 유산을 무엇이라 하나요?", options:["유형유산", "자연유산", "무형유산", "기록유산"], answer:1, exp:"자연적으로 만들어져 보호할 가치가 큰 것을 자연유산이라고 합니다.", hint:"이름 그대로 '자연'과 관련된 유산입니다." },
+
+            // --- 4지역: 역사 기록관 ---
+            { id:"4_q1", zone:4, stage:"quick", type:"mcq", question:"우리 지역을 빛낸 역사적 인물을 조사할 때 가장 믿을 수 있는 자료는?", options:["친구의 일기", "역사 책이나 위인전", "소설책", "만화 영화"], answer:1, exp:"사실을 바탕으로 쓰인 역사 책이나 위인전이 가장 신뢰할 수 있습니다.", hint:"지어낸 이야기가 아닌 사실을 기록한 책을 골라야 합니다." },
+            { id:"4_q2", zone:4, stage:"quick", type:"ox", question:"역사적 인물은 꼭 전쟁에서 나라를 구한 장군이어야만 한다.", options:["O","X"], answer:1, exp:"학자, 예술가, 발명가, 독립운동가 등 다양한 분야에서 훌륭한 업적을 남긴 분들도 역사적 인물입니다.", hint:"세종대왕, 허준, 김홍도 등도 훌륭한 역사적 인물입니다." },
+            { id:"4_q3", zone:4, stage:"quick", type:"mcq", question:"그 시대에 살았던 분이나 관련 전문가를 직접 만나서 묻고 답하며 조사하는 방법은?", options:["인터넷 검색", "설문 조사", "면담", "지도 읽기"], answer:2, exp:"직접 만나서 대화를 통해 정보를 얻는 것을 '면담'이라고 합니다.", hint:"얼굴을 맞대고 이야기(담화)를 나눈다는 뜻입니다." },
+            { id:"4_q4", zone:4, stage:"quick", type:"mcq", question:"마을 이름이나 땅 이름(지명)에 얽힌 이야기(유래)를 조사하면 무엇을 알 수 있나요?", options:["내일의 날씨", "그 지역의 옛날 모습이나 역사적 사건", "다른 나라의 인구", "미래에 지어질 건물"], answer:1, exp:"지명에는 옛 사람들의 생활, 지형의 특징, 겪었던 사건 등이 남아 있습니다.", hint:"이름이 왜 그렇게 지어졌는지 이유를 파헤쳐보는 것입니다." },
+            { id:"4_q5", zone:4, stage:"quick", type:"ox", question:"인터넷으로 역사 자료를 찾을 때는 정보가 정확한지 꼭 확인해야 한다.", options:["O","X"], answer:0, exp:"인터넷에는 거짓 정보도 많으므로 출처가 믿을만한 곳(정부, 박물관 등)인지 확인해야 합니다.", hint:"누구나 글을 올릴 수 있는 인터넷의 특징을 조심해야 합니다." },
+            { id:"4_q6", zone:4, stage:"quick", type:"mcq", question:"역사 조사 계획서에 포함되지 않아도 되는 내용은?", options:["조사 주제", "조사 기간과 장소", "역할 분담", "조사 끝난 후 먹을 간식"], answer:3, exp:"계획서에는 조사의 목적, 내용, 방법 등이 들어가야 합니다.", hint:"조사 활동 자체와 관련 없는 것을 고르세요." },
+            { id:"4_q7", zone:4, stage:"activity", type:"categorize", question:"역사 조사 방법과 알맞은 자료를 연결/분류하세요.", categories:["문헌(글) 조사", "현장 및 면담 조사"], items:[{text:"도서관에서 위인전 읽기", c:0}, {text:"지역 기념관 방문하기", c:1}, {text:"문화 해설사 선생님과 대화하기", c:1}, {text:"시청 누리집(홈페이지) 검색", c:0}], exp:"책, 인터넷(글)은 문헌 조사이고, 직접 가거나 사람을 만나는 것은 현장/면담입니다.", hint:"글을 읽는 것과 몸을 움직여 사람이나 장소를 만나는 것을 구분하세요." },
+            { id:"4_q8", zone:4, stage:"activity", type:"categorize", question:"우리 지역의 역사를 알리는 방법에 알맞은 것을 분류하세요.", categories:["좋은 방법", "적절하지 않은 방법"], items:[{text:"역사 신문 만들기", c:0}, {text:"안내 동영상 만들어 인터넷에 올리기", c:0}, {text:"유적지 벽에 내 이름 낙서하기", c:1}, {text:"확인되지 않은 거짓말 섞어서 말하기", c:1}], exp:"올바른 정보를 여러 사람이 쉽게 볼 수 있도록 훼손 없이 알리는 것이 좋습니다.", hint:"남에게 피해를 주거나 거짓 정보를 주면 안 됩니다." },
+            { id:"4_q9", zone:4, stage:"situation", type:"mcq", question:"'붓돌마을'이라는 지명을 조사하려고 합니다. 붓을 만드는 돌이 많이 났다고 하는데, 옛날 사람들은 이곳에서 주로 무슨 일을 했을까요?", options:["바다에서 물고기를 잡았다.", "돌을 캐서 벼루나 붓과 관련된 물건을 만들었다.", "목장에서 말을 길렀다.", "염전에서 소금을 만들었다."], answer:1, exp:"마을 이름에 '붓'과 '돌'이 들어간 것으로 보아 먹, 벼루, 붓 관련 활동을 짐작할 수 있습니다.", hint:"이름 속에 힌트가 들어있습니다." },
+            { id:"4_q10", zone:4, stage:"situation", type:"mcq", question:"독립운동가 할아버지의 삶을 조사하려고 합니다. 가장 좋은 면담 대상자는 누구일까요?", options:["할아버지의 삶을 연구한 역사 선생님이나 후손", "동네 편의점 사장님", "오늘 처음 전학 온 친구", "외국인 관광객"], answer:0, exp:"그 인물에 대해 가장 잘 알고 있는 관련된 분을 만나야 정확한 정보를 얻습니다.", hint:"정보를 가장 많이 가지고 있을 사람을 고르세요." },
+            { id:"4_q11", zone:4, stage:"gate", type:"mcq", question:"역사적 인물이나 문화유산에 담긴 이야기(전설)를 통해 알 수 있는 것은?", options:["최신 스마트폰 사용법", "옛사람들의 생각과 간절한 바람", "정확한 우주 과학 법칙", "다른 지역의 언어"], answer:1, exp:"전해오는 이야기에는 당시 사람들의 소망, 두려움, 지혜 등이 담겨 있습니다.", hint:"옛날 사람들의 마음속을 들여다보는 거울입니다." },
+            { id:"4_q12", zone:4, stage:"gate", type:"ox", question:"역사 조사를 할 때는 한 가지 자료만 보는 것보다, 책, 인터넷, 면담 등 여러 가지 자료를 비교해보는 것이 좋다.", options:["O","X"], answer:0, exp:"자료가 정확한지 확인하고 더 깊이 알기 위해 다양한 자료를 교차 확인해야 합니다.", hint:"여러 명의 증언을 들어야 사건의 진실을 정확히 알 수 있는 것과 같습니다." },
+            { id:"4_q13", zone:4, stage:"quick", type:"mcq", question:"지역 역사를 소개하는 안내 자료에 들어가면 좋은 내용은?", options:["인물의 훌륭한 업적이나 배울 점", "인물의 개인적인 비밀번호", "인물과 전혀 상관없는 내 이야기", "거짓으로 꾸며낸 멋진 영웅담"], answer:0, exp:"소개 자료는 사람들에게 사실과 교훈을 전달해야 합니다.", hint:"다른 사람들이 읽고 감동하거나 배울 수 있는 내용을 생각하세요." },
+            { id:"4_q14", zone:4, stage:"activity", type:"sequence", question:"면담 조사 과정을 순서대로 맞추세요.", items:["면담 목적과 대상 정하기", "면담 질문지 만들기", "약속을 잡고 찾아가 면담하기(기록하기)", "면담 내용 정리하고 감사 인사 전하기"], answer:[0,1,2,3], exp:"누구를 왜 만날지 정하고 질문을 준비한 뒤, 만나서 기록하고, 나중에 정리합니다.", hint:"만나기 전에 준비(질문지)가 꼭 필요합니다." },
+            { id:"4_q15", zone:4, stage:"gate", type:"mcq", question:"우리 지역 역사를 대하는 올바른 태도는?", options:["옛날이야기니 무시한다.", "자랑스럽게 여기고 잘 보존하여 후손에게 알린다.", "다른 지역 역사가 더 좋다고 부러워만 한다.", "역사적 장소를 밀어버리고 무조건 높은 건물을 짓는다."], answer:1, exp:"지역의 역사에 자긍심을 갖고 소중히 지키는 태도가 필요합니다.", hint:"우리의 뿌리를 사랑하고 아끼는 마음입니다." },
+
+            // --- 5지역: 알뜰 시장 ---
+            { id:"5_q1", zone:5, stage:"quick", type:"mcq", question:"사람들이 원하는 것에 비해 쓸 수 있는 돈이나 자원이 부족한 현상을 무엇이라고 하나요?", options:["희소성", "풍족함", "합리성", "교류"], answer:0, exp:"자원의 양이 한정되어 있어 생기는 부족함을 '희소성'이라고 합니다.", hint:"드물 희, 적을 소. 적어서 귀하다는 뜻입니다." },
+            { id:"5_q2", zone:5, stage:"quick", type:"ox", question:"돈이 아주 많은 부자는 선택의 문제를 겪지 않는다.", options:["O","X"], answer:1, exp:"돈이 많아도 시간이나 다른 자원은 한정되어 있으므로 누구에게나 선택의 문제가 생깁니다.", hint:"부자도 하루는 24시간밖에 없습니다." },
+            { id:"5_q3", zone:5, stage:"quick", type:"mcq", question:"여러 가지 중 하나를 선택했을 때, 포기한 것들 중 가장 가치가 큰 것을 무엇이라 하나요?", options:["생산 비용", "기회비용", "교통비", "생활비"], answer:1, exp:"어떤 선택으로 인해 포기해야 하는 대안의 가치를 기회비용이라고 합니다.", hint:"내가 잡은 '기회' 때문에 날아간 다른 기회의 값어치입니다." },
+            { id:"5_q4", zone:5, stage:"quick", type:"mcq", question:"주어진 돈이나 시간 안에서 가장 큰 만족을 얻을 수 있도록 선택하는 것을 무엇이라 하나요?", options:["합리적 선택", "충동적 선택", "낭비적 선택", "무조건 선택"], answer:0, exp:"여러 조건을 따져보고 자신에게 가장 유리하고 만족스러운 결정을 내리는 것입니다.", hint:"똑똑하고 이치에 맞는 선택입니다." },
+            { id:"5_q5", zone:5, stage:"quick", type:"ox", question:"가장 비싼 물건을 고르는 것이 항상 합리적인 선택이다.", options:["O","X"], answer:1, exp:"비싸다고 자신에게 꼭 필요한 것은 아니며, 가격, 품질, 필요성을 모두 고려해야 합니다.", hint:"비싼 겨울 패딩을 여름에 사는 것은 합리적이지 않습니다." },
+            { id:"5_q6", zone:5, stage:"quick", type:"mcq", question:"물건을 살 때 고려해야 할 '선택 기준'으로 적절하지 않은 것은?", options:["가격", "품질(튼튼함)", "디자인", "유명한 연예인이 광고하는지 여부만 맹신하기"], answer:3, exp:"광고에 휩쓸리지 말고 나에게 진짜 필요한지, 품질과 가격이 적당한지 따져야 합니다.", hint:"남의 눈치보다 나의 상황이 더 중요합니다." },
+            { id:"5_q7", zone:5, stage:"activity", type:"categorize", question:"현명한 소비 행동과 그렇지 않은 행동을 분류하세요.", categories:["합리적 소비 (현명함)", "충동구매 / 낭비"], items:[{text:"계획 세워 물건 사기", c:0}, {text:"가격 비교해보고 사기", c:0}, {text:"예뻐 보인다고 당장 필요없는 학용품 사기", c:1}, {text:"친구들이 다 샀다고 따라서 사기", c:1}], exp:"계획과 비교는 합리적이지만, 즉흥적이거나 유행에 휩쓸리는 것은 충동구매입니다.", hint:"머리로 생각하고 사는 것과 마음(기분)으로 사는 것의 차이입니다." },
+            { id:"5_q8", zone:5, stage:"activity", type:"categorize", question:"선택의 문제가 일어나는 원인과 결과를 분류하세요.", categories:["원인", "결과"], items:[{text:"원하는 것은 많음 (욕망)", c:0}, {text:"자원(돈, 시간)이 부족함 (희소성)", c:0}, {text:"무엇을 할지 고민하게 됨", c:1}, {text:"하나를 선택하면 다른 것을 포기함", c:1}], exp:"욕망과 희소성이라는 원인 때문에 선택과 포기라는 결과가 생깁니다.", hint:"무엇 때문에 고민이 시작되었는지 생각해보세요." },
+            { id:"5_q9", zone:5, stage:"situation", type:"mcq", question:"용돈 5천원이 있습니다. 4천원짜리 공책과 2천원짜리 아이스크림을 모두 사고 싶은데 돈이 부족합니다. 합리적인 선택 과정으로 첫 번째 할 일은?", options:["당장 아이스크림을 사 먹고 남은 돈은 버린다.", "나에게 지금 당장 더 필요한 것이 무엇인지(문제 인식) 생각한다.", "부모님께 무조건 돈을 더 달라고 조른다.", "아무것도 안 사고 하루 종일 운다."], answer:1, exp:"돈이 부족할 때는 우선순위를 정하고 무엇이 꼭 필요한지 문제를 정확히 인식해야 합니다.", hint:"고민이 생겼을 때 가장 먼저 해야 할 생각입니다." },
+            { id:"5_q10", zone:5, stage:"situation", type:"mcq", question:"새 운동화를 사려고 마트에 갔습니다. A운동화는 3만원에 튼튼하고, B운동화는 10만원인데 유행하는 디자인입니다. 합리적 선택 기준은?", options:["무조건 비싼 B운동화를 산다.", "나의 예산(가진 돈)과 발을 편하게 해줄 튼튼함(품질)을 기준으로 고른다.", "눈을 감고 아무거나 잡히는 대로 산다.", "직원에게 알아서 골라달라고 한다."], answer:1, exp:"합리적 선택은 자신의 예산과 사용 목적(품질)에 맞는 기준을 세워 평가하는 것입니다.", hint:"운동화의 진짜 목적(편안함, 튼튼함)과 내 지갑 사정을 고려하세요." },
+            { id:"5_q11", zone:5, stage:"gate", type:"mcq", question:"합리적인 선택을 하기 위한 과정의 순서로 바른 것은?<br>(가)문제 인식 (나)결과 평가 (다)대안 탐색과 평가 (라)선택", options:["가 - 다 - 라 - 나", "나 - 가 - 라 - 다", "다 - 가 - 나 - 라", "가 - 라 - 다 - 나"], answer:0, exp:"문제를 깨닫고(가), 정보를 찾아 비교하고(다), 고르고(라), 잘 샀는지 반성(나)합니다.", hint:"필요한 걸 깨닫는 게 먼저, 후회(반성)하는 건 항상 마지막입니다." },
+            { id:"5_q12", zone:5, stage:"gate", type:"ox", question:"우리가 쓰는 자원은 무한하지 않고 한정되어 있기 때문에 합리적 선택이 필요하다.", options:["O","X"], answer:0, exp:"자원의 희소성 때문에 낭비를 줄이고 만족을 높이기 위해 합리적 선택을 해야 합니다.", hint:"자원이 무한하다면 아무거나 다 사면 되니까 고민할 필요가 없습니다." },
+            { id:"5_q13", zone:5, stage:"quick", type:"mcq", question:"마트에서 여러 상품의 정보를 꼼꼼히 비교해보는 활동을 무엇이라고 하나요?", options:["충동구매", "대안 탐색", "과소비", "반품"], answer:1, exp:"어떤 것을 살지 여러 가지 후보(대안)를 찾아보고 비교하는 과정입니다.", hint:"이것저것 따져보는 일입니다." },
+            { id:"5_q14", zone:5, stage:"activity", type:"sequence", question:"물건을 똑똑하게 구매하는 순서를 배열하세요.", items:["물건을 살 돈 모으기 및 필요성 깨닫기", "인터넷이나 전단지로 여러 가게의 가격표 비교하기", "가장 조건이 좋은 가게에서 물건 사기", "영수증을 확인하고 용돈 기입장 쓰기(평가)"], answer:[0,1,2,3], exp:"필요성 파악 -> 정보 수집 및 비교 -> 구매 -> 사후 평가의 순서입니다.", hint:"돈을 쓰고 나면 기록을 남기는 것이 마지막입니다." },
+            { id:"5_q15", zone:5, stage:"gate", type:"mcq", question:"광고를 볼 때의 올바른 태도는 무엇인가요?", options:["광고에 나온 말은 100% 진짜라고 믿는다.", "과장되거나 거짓된 정보가 없는지 비판적으로 살펴본다.", "광고에 나오면 무조건 산다.", "광고 모델이 예쁘면 무조건 품질도 좋다고 생각한다."], answer:1, exp:"광고는 물건을 팔기 위해 장점만 부풀릴 수 있으므로 주의 깊게 살펴야 합니다.", hint:"좋은 점만 말하는 사람의 말은 한 번 더 확인해봐야 합니다." },
+
+            // --- 6지역: 교류 항구 ---
+            { id:"6_q1", zone:6, stage:"quick", type:"mcq", question:"생활에 필요한 물건을 만들거나 서비스를 제공하는 활동을 무엇이라고 하나요?", options:["소비", "생산", "분배", "저축"], answer:1, exp:"농사, 공장 물건 만들기, 의사의 진료 등 가치를 만들어내는 모든 활동이 '생산'입니다.", hint:"'만들어낸다' 또는 '제공한다'는 뜻의 단어입니다." },
+            { id:"6_q2", zone:6, stage:"quick", type:"ox", question:"우리가 돈을 내고 버스를 타거나 미용실에서 머리를 자르는 것은 소비 활동이다.", options:["O","X"], answer:0, exp:"재화(물건)뿐만 아니라 서비스(편리함)를 돈을 주고 이용하는 것도 '소비'입니다.", hint:"내가 돈을 쓰고 만족을 얻는 행동입니다." },
+            { id:"6_q3", zone:6, stage:"quick", type:"mcq", question:"지역 간에 서로 필요한 물건이나 기술, 문화 등을 주고받는 것을 무엇이라고 하나요?", options:["고립", "경쟁", "교류", "단절"], answer:2, exp:"서로 부족한 것을 채우기 위해 오고 가는 것을 '교류'라고 합니다.", hint:"친구가 지우개를 빌려주고, 나는 연필을 빌려주는 것과 같습니다." },
+            { id:"6_q4", zone:6, stage:"quick", type:"mcq", question:"지역 간에 교류가 발생하는 가장 큰 이유는 무엇인가요?", options:["지역마다 자연환경과 생산되는 물건(자원)이 달라서", "모든 지역이 똑같은 물건만 만들어서", "사람들이 여행을 싫어해서", "교통이 너무 불편해서"], answer:0, exp:"환경이 달라 내 지역에 없는 것을 다른 지역에서 구해야 하기 때문입니다.", hint:"바닷가에는 물고기가 흔하지만, 산속에는 귀한 이유를 생각해보세요." },
+            { id:"6_q5", zone:6, stage:"quick", type:"ox", question:"생산 활동과 소비 활동은 서로 아무런 관련 없이 따로 일어난다.", options:["O","X"], answer:1, exp:"누군가 생산한 것을 소비자가 사고, 그 돈으로 생산자는 다시 물건을 만듭니다. (밀접하게 연결됨)", hint:"만드는 사람이 없으면 살 수 없고, 사는 사람이 없으면 만들 이유가 없습니다." },
+            { id:"6_q6", zone:6, stage:"quick", type:"mcq", question:"오늘날 지역 간의 교류가 더욱 활발해진 이유는 무엇의 발달 덕분인가요?", options:["교통과 통신의 발달", "높은 산맥의 형성", "과거 신분 제도의 부활", "날씨의 변화"], answer:0, exp:"도로, 철도, 비행기, 인터넷 등의 발달로 빠르고 쉽게 교류할 수 있게 되었습니다.", hint:"먼 거리를 빨리 가고 연락할 수 있게 해주는 것들입니다." },
+            { id:"6_q7", zone:6, stage:"activity", type:"categorize", question:"다음 활동들을 생산과 소비로 분류하세요.", categories:["생산 활동 (만들고 제공함)", "소비 활동 (사용함)"], items:[{text:"공장에서 장난감 만들기", c:0}, {text:"경찰관이 마을의 안전을 지키기", c:0}, {text:"문구점에서 공책 사기", c:1}, {text:"식당에서 맛있는 밥 사먹기", c:1}], exp:"물건/서비스를 제공하면 생산, 돈을 내고 사용/이용하면 소비입니다.", hint:"내가 제공하는 입장인지, 혜택을 받는 입장인지 생각하세요." },
+            { id:"6_q8", zone:6, stage:"activity", type:"categorize", question:"지역 간 교류의 모습을 종류별로 분류하세요.", categories:["물자(물건) 교류", "문화/정보 교류"], items:[{text:"제주도의 감귤을 서울로 보내기", c:0}, {text:"바닷가 마을의 수산물을 산지 마을로 팔기", c:0}, {text:"지역 축제에 다른 지역 공연단 초청하기", c:1}, {text:"다른 지역 도서관과 인터넷으로 책 정보 공유하기", c:1}], exp:"눈에 보이는 물건이 이동하면 물자 교류, 눈에 보이지 않는 예술이나 지식이 이동하면 문화/정보 교류입니다.", hint:"택배 상자에 담을 수 있는지 없는지 생각해보세요." },
+            { id:"6_q9", zone:6, stage:"situation", type:"mcq", question:"우리 지역은 산이 많아 사과가 많이 나고, 이웃 지역은 바다가 있어 오징어가 많이 납니다. 두 지역이 서로 이익을 얻으려면 어떻게 해야 할까요?", options:["우리 지역의 사과를 버리고 오징어를 잡으러 이사 간다.", "우리 지역의 사과와 이웃 지역의 오징어를 서로 사고판다(교류한다).", "서로 아무것도 안 주고 안 받는다.", "오징어에 사과를 억지로 붙여서 먹는다."], answer:1, exp:"각 지역의 풍부한 특산물을 서로 교류하면 두 지역 모두 만족할 수 있습니다.", hint:"서로 남는 것을 주고 부족한 것을 받아오는 것이 현명합니다." },
+            { id:"6_q10", zone:6, stage:"situation", type:"mcq", question:"아침에 먹은 빵은 우리 지역 빵집에서 만들었지만, 빵을 만든 밀가루는 외국의 평야에서 농사지은 것입니다. 이를 통해 알 수 있는 사실은?", options:["빵은 밀가루 없이도 만들 수 있다.", "우리 지역은 외국과 아무런 교류를 하지 않는다.", "우리의 일상생활은 다른 지역(나라)의 생산 활동과 깊이 연결되어 있다.", "빵집 사장님이 농사도 직접 다 지었다."], answer:2, exp:"물건이 만들어지는 과정을 보면 전 세계 여러 지역의 교류를 알 수 있습니다.", hint:"내가 쓰는 물건이 어디서 어떻게 왔는지 거슬러 올라가 보세요." },
+            { id:"6_q11", zone:6, stage:"gate", type:"mcq", question:"우리 지역과 다른 지역이 자매결연을 맺고 특산물을 직거래하는 행사를 열었습니다. 이것은 어떤 교류에 속할까요?", options:["물자(경제) 교류", "전쟁 기술 교류", "비밀 정보 교류", "환경오염 교류"], answer:0, exp:"특산물(상품)을 직접 사고파는 경제적 목적의 교류이므로 물자 교류입니다.", hint:"물건이 오고 가고 돈이 오고 가는 교류입니다." },
+            { id:"6_q12", zone:6, stage:"gate", type:"ox", question:"지역 간의 교류는 서로에게 도움을 주기보다는 피해를 주는 경우가 더 많다.", options:["O","X"], answer:1, exp:"올바른 교류는 상호 의존하며 서로 발전하고 이익을 얻기 위해 이루어집니다.", hint:"서로 손해를 본다면 아무도 교류를 하지 않을 것입니다." },
+            { id:"6_q13", zone:6, stage:"quick", type:"mcq", question:"두 지역이 서로 부족한 것을 채우기 위해 의존하는 관계를 무엇이라고 하나요?", options:["상호 작용(의존)", "완전 독립", "일방적 지배", "무관심"], answer:0, exp:"서로 기대고 도움을 주고받는 관계를 상호 의존이라고 합니다.", hint:"'서로'라는 뜻을 가진 단어가 포함되어 있습니다." },
+            { id:"6_q14", zone:6, stage:"activity", type:"sequence", question:"한 장의 편지가 다른 지역 친구에게 전달되는 교류 과정을 순서대로 배열하세요.", items:["집에서 편지를 쓰고 우표를 붙인다", "동네 우체통에 편지를 넣는다", "우편집중국에서 편지를 지역별로 분류한다", "배달차(교통수단)를 타고 다른 지역 친구 집으로 배달된다"], answer:[0,1,2,3], exp:"작성 -> 발송 -> 분류 -> 이동 및 배달의 순서입니다.", hint:"편지가 내 손을 떠나서 차를 타기까지의 과정을 생각하세요." },
+            { id:"6_q15", zone:6, stage:"gate", type:"mcq", question:"다음 중 생산자와 소비자의 관계를 바르게 설명한 것은?", options:["생산자는 소비자가 무엇을 원하든 상관하지 않는다.", "소비자가 물건을 사주지 않아도 생산자는 돈을 번다.", "소비자가 필요한 물건을 사주면, 생산자는 그 이익으로 계속 생산을 할 수 있다.", "생산 활동과 소비 활동은 완전히 반대되어 서로 싸우는 관계다."], answer:2, exp:"생산과 소비는 톱니바퀴처럼 맞물려 경제를 돌아가게 하는 협력적 관계입니다.", hint:"서로가 있어야 자신이 존재할 수 있는 공생 관계입니다." },
+
+            // --- 7지역(최종 보스용 종합 문제 8문제) ---
+            { id:"7_q1", zone:7, stage:"gate", type:"mcq", question:"[종합] 지도를 볼 때 방위, 축척, 기호 등을 모아놓은 표를 무엇이라 하나요?", options:["등고선", "범례", "색인", "자연환경"], answer:1, exp:"지도 구석에 있는 기호 설명표는 '범례'입니다." },
+            { id:"7_q2", zone:7, stage:"gate", type:"mcq", question:"[종합] 기온과 강수량 등 그 지역의 오랜 날씨 특징을 이르는 말은?", options:["지형", "인문환경", "기후", "계절"], answer:2, exp:"기온, 강수량, 바람 등의 평균적인 상태를 기후라고 합니다." },
+            { id:"7_q3", zone:7, stage:"gate", type:"ox", question:"[종합] 유형유산과 달리 무형유산(기술, 예술)은 중요하지 않아 보호할 필요가 없다.", options:["O","X"], answer:1, exp:"형태가 없어도 조상의 지혜와 예술이 담긴 소중한 유산으로 꼭 보호해야 합니다." },
+            { id:"7_q4", zone:7, stage:"gate", type:"mcq", question:"[종합] 지역의 역사를 조사할 때, 사실인지 아닌지 확인하기 위해 가장 좋은 태도는?", options:["무조건 첫 번째 인터넷 글만 믿는다.", "여러 가지 자료를 찾아보고 비교해 본다.", "친구가 해준 상상 이야기를 기록한다.", "유적지에 가서 낙서를 해본다."], answer:1, exp:"자료의 신뢰성을 높이기 위해 여러 자료를 비교 분석해야 합니다." },
+            { id:"7_q5", zone:7, stage:"activity", type:"categorize", question:"[종합] 합리적 소비와 낭비를 분류하세요.", categories:["합리적 선택", "낭비적 선택"], items:[{text:"필요한 물건 목록 미리 적어가기", c:0}, {text:"세일한다고 필요없는 물건 잔뜩 사기", c:1}, {text:"품질과 가격 꼼꼼히 비교하기", c:0}, {text:"디자인만 보고 가장 비싼 것 고르기", c:1}], exp:"계획과 비교는 합리적이지만 충동과 과시욕은 낭비입니다." },
+            { id:"7_q6", zone:7, stage:"gate", type:"mcq", question:"[종합] 병원에서 의사 선생님이 환자를 치료해 주는 것은 생산 활동인가요, 소비 활동인가요?", options:["건물이 아니니 아무것도 아니다.", "편리함(서비스)을 제공하므로 생산 활동이다.", "약을 먹으므로 소비 활동이다.", "저축 활동이다."], answer:1, exp:"사람들의 생활을 돕고 편리하게 해주는 '서비스' 제공도 훌륭한 생산 활동입니다." },
+            { id:"7_q7", zone:7, stage:"activity", type:"sequence", question:"[종합] 옛 지역 역사를 알아보고 다른 지역에 알리는 과정을 순서대로 나열하세요.", items:["조사 계획 세우기 (주제, 방법)", "도서관, 박물관, 면담 등을 통해 조사하기", "조사한 내용을 바탕으로 안내 자료 만들기", "자매결연 맺은 다른 지역에 안내 자료 보내 교류하기"], answer:[0,1,2,3], exp:"계획 -> 조사 -> 자료 제작 -> 타 지역 교류 의 순서로 사회적 지식이 확장됩니다." },
+            { id:"7_q8", zone:7, stage:"situation", type:"mcq", question:"[종합] 우리 마을에 옛날 성곽(국가유산)이 있습니다. 이 성곽을 활용하여 우리 지역 경제를 발전시키고 다른 지역과 교류할 수 있는 좋은 방법은?", options:["성곽 돌을 깨서 다른 지역에 건축 자재로 판다.", "성곽을 부수고 그 자리에 큰 마트를 짓는다.", "성곽 축제를 열어 다른 지역 관광객을 초대하고 지역 특산물을 알린다.", "우리 마을 사람만 보도록 철조망을 치고 문을 닫는다."], answer:2, exp:"국가유산을 잘 보존하면서 문화 축제를 열면 지역 간 문화/경제 교류가 활발해집니다." }
+        ];
+
+        /* =====================================================================
+           3. 게임 전역 상태 변수 (State)
+           ===================================================================== */
+        let state = {
+            userName: '탐험대원', char: 'rabbit',
+            score: 0, stars: 0,
+            zoneStatus: { // 각 지역 잠금해제 및 클리어 상태
+                1: { locked: false, cleared: false, badge: null },
+                2: { locked: true, cleared: false, badge: null },
+                3: { locked: true, cleared: false, badge: null },
+                4: { locked: true, cleared: false, badge: null },
+                5: { locked: true, cleared: false, badge: null },
+                6: { locked: true, cleared: false, badge: null }
+            },
+            usedQids: [],      // 출제된 문제 기록
+            wrongQids: [],     // 틀린 문제 기록 (복습소 용)
+            playTime: 0,
+            startTime: null
+        };
+
+        const charIcons = { 'rabbit': '🐰', 'bear': '🐻', 'cat': '🐱', 'fox': '🦊' };
+        const zoneTitles = ["", "1. 지도 연구소", "2. 우리 지역 관측소", "3. 국가유산 박물관", "4. 역사 기록관", "5. 알뜰 시장", "6. 교류 항구", "7. 사회 탐험 본부 (최종)"];
+
+        /* =====================================================================
+           4. 오디오 (효과음) 시스템
+           ===================================================================== */
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type, duration, vol=0.1) {
+            if (!GAME_CONFIG.soundEnabled || audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+        const sfx = {
+            correct: () => { playTone(523.25, 'sine', 0.1); setTimeout(()=>playTone(659.25, 'sine', 0.2), 100); },
+            wrong: () => { playTone(300, 'sawtooth', 0.3); setTimeout(()=>playTone(250, 'sawtooth', 0.4), 150); },
+            badge: () => { playTone(440, 'square', 0.1); playTone(554, 'square', 0.1, 0.1); setTimeout(()=>playTone(659, 'square', 0.4), 100); },
+            unlock: () => { playTone(800, 'sine', 0.1); setTimeout(()=>playTone(1200, 'sine', 0.2), 100); }
+        };
+
+        function toggleSound() {
+            GAME_CONFIG.soundEnabled = !GAME_CONFIG.soundEnabled;
+            document.getElementById('sound-status').innerText = GAME_CONFIG.soundEnabled ? "켜짐" : "꺼짐";
+            if(GAME_CONFIG.soundEnabled && audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        /* =====================================================================
+           5. 코어 로직 & 화면 네비게이션
+           ===================================================================== */
+        window.onload = () => {
+            if (localStorage.getItem('socialExpeditionSave')) {
+                document.getElementById('btn-continue').style.display = 'inline-flex';
+            }
+        };
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function goHome() { saveGame(); showScreen('start-screen'); }
+
+        function saveGame() {
+            state.playTime += state.startTime ? (Date.now() - state.startTime) / 1000 : 0;
+            state.startTime = Date.now();
+            localStorage.setItem('socialExpeditionSave', JSON.stringify(state));
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('socialExpeditionSave');
+            if (saved) {
+                state = JSON.parse(saved);
+                state.startTime = Date.now();
+                updateMapUI();
+                showScreen('map-screen');
+            }
+        }
+
+        function resetSaveData() {
+            if(confirm("모든 탐험 기록이 지워집니다. 정말 초기화할까요?")) {
+                localStorage.removeItem('socialExpeditionSave');
+                location.reload();
+            }
+        }
+
+        function showHowToPlay() {
+            showModal("게임 방법 📖", "1. 지도의 지역을 순서대로 탐험하세요.<br>2. 지역마다 다양한 임무(문제)를 해결하세요.<br>3. 정답을 맞혀 점수와 별, 배지를 모으세요.<br>4. 틀린 문제는 '복습소'에서 다시 풀 수 있어요.<br>5. 6개 조각을 모아 최종 본부에 도전하세요!");
+        }
+
+        function goCharSelect() { showScreen('char-screen'); }
+        
+        function selectChar(c) {
+            document.querySelectorAll('.char-card').forEach(el => el.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            state.char = c;
+        }
+
+        function startNewGame() {
+            const name = document.getElementById('input-name').value.trim();
+            state.userName = name || '탐험대원';
+            state.startTime = Date.now();
+            updateMapUI();
+            saveGame();
+            showScreen('map-screen');
+        }
+
+        /* =====================================================================
+           6. 메인 탐험 지도 로직
+           ===================================================================== */
+        function updateMapUI() {
+            document.getElementById('ui-char-icon').innerText = charIcons[state.char];
+            document.getElementById('ui-player-name').innerText = state.userName;
+            document.getElementById('ui-score').innerText = state.score;
+            document.getElementById('ui-stars').innerText = state.stars;
+            document.getElementById('ui-wrong-count').innerText = state.wrongQids.length;
+
+            let badges = 0, pieces = 0;
+            for(let i=1; i<=6; i++) { if(state.zoneStatus[i].cleared) { badges++; pieces++; } }
+            document.getElementById('ui-badges').innerText = badges;
+            document.getElementById('ui-pieces').innerText = pieces;
+
+            const container = document.getElementById('zones-container');
+            container.innerHTML = '';
+
+            const icons = ["", "🗺️", "🔭", "🏛️", "📜", "🛒", "🚢"];
+
+            for (let i = 1; i <= 6; i++) {
+                const z = state.zoneStatus[i];
+                const node = document.createElement('div');
+                node.className = `zone-node ${z.locked ? 'locked' : (z.cleared ? 'cleared' : 'unlocked')}`;
+                node.style.backgroundColor = z.locked ? '#ccc' : `var(--color-z${i})`;
+                node.style.color = '#fff';
+                node.style.textShadow = "1px 1px 3px rgba(0,0,0,0.5)";
+                
+                let inner = `<div class="zone-icon">${z.locked ? '🔒' : icons[i]}</div>`;
+                inner += `<div>${i}지역</div>`;
+                if(z.cleared) {
+                    let bColor = z.badge==='금'?'#FFD700' : z.badge==='은'?'#C0C0C0' : '#CD7F32';
+                    inner += `<div class="badge-icon" style="background:${bColor}; border-color:${bColor}; color:#fff; font-size:15px; font-weight:bold;">${z.badge}</div>`;
+                }
+                node.innerHTML = inner;
+
+                node.onclick = () => {
+                    if(z.locked) { showModal("접근 불가 🔒", `이전 지역을 먼저 완료해야 ${i}지역이 열립니다.`); return; }
+                    enterZone(i);
+                };
+                container.appendChild(node);
+            }
+
+            // 최종 관문 렌더링
+            const isFinalUnlocked = pieces === 6;
+            const finalNode = document.createElement('div');
+            finalNode.className = `zone-node ${isFinalUnlocked ? 'unlocked' : 'locked'}`;
+            finalNode.style.backgroundColor = isFinalUnlocked ? 'var(--color-final)' : '#ccc';
+            finalNode.style.color = '#fff';
+            finalNode.style.width = '180px'; finalNode.style.height = '180px';
+            finalNode.innerHTML = `<div class="zone-icon">${isFinalUnlocked ? '🏰' : '🔒'}</div><div style="font-size:1.1rem;">최종 본부</div>`;
+            finalNode.onclick = () => {
+                if(!isFinalUnlocked) { showModal("봉인됨 🔒", "6개의 지도 조각을 모두 모아야 들어갈 수 있습니다."); return; }
+                enterFinalZone();
+            };
+            container.appendChild(finalNode);
+        }
+
+        /* =====================================================================
+           7. 퀴즈 엔진 & 지역 탐험 진행
+           ===================================================================== */
+        let currentQuizQueue = [];
+        let currentQuizIndex = 0;
+        let currentZoneId = 1;
+        let zoneCorrectCount = 0;
+        let currentRetryCount = 0; // 0=첫시도, 1=힌트보고 재시도
+        let isReviewMode = false;
+
+        function enterZone(zoneId) {
+            currentZoneId = zoneId;
+            isReviewMode = false;
+            zoneCorrectCount = 0;
+            currentQuizIndex = 0;
+            
+            // 문제 큐 생성 (빠른퀴즈 4, 활동 2, 상황 1, 관문 2)
+            currentQuizQueue = buildZoneQueue(zoneId);
+            
+            if(currentQuizQueue.length === 0) {
+                showModal("오류", "문제 데이터가 부족합니다."); return;
+            }
+
+            document.getElementById('quiz-zone-name').innerText = zoneTitles[zoneId];
+            showScreen('quiz-screen');
+            renderCurrentQuiz();
+        }
+
+        function enterFinalZone() {
+            currentZoneId = 7;
+            isReviewMode = false;
+            zoneCorrectCount = 0;
+            currentQuizIndex = 0;
+            
+            // 7지역 문제 8개 전부 큐에 넣기
+            currentQuizQueue = questionBank.filter(q => q.zone === 7);
+            document.getElementById('quiz-zone-name').innerText = zoneTitles[7];
+            showScreen('quiz-screen');
+            renderCurrentQuiz();
+        }
+
+        function buildZoneQueue(z) {
+            const queue = [];
+            const avail = questionBank.filter(q => q.zone === z && !state.usedQids.includes(q.id));
+            const availAll = questionBank.filter(q => q.zone === z); // 부족하면 전체에서 재사용
+            
+            function pick(stage, count) {
+                let pool = avail.filter(q => q.stage === stage);
+                if(pool.length < count) pool = availAll.filter(q => q.stage === stage); // 부족하면 리필
+                
+                // 셔플
+                for(let i=pool.length-1; i>0; i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+                
+                for(let i=0; i<Math.min(count, pool.length); i++) {
+                    queue.push(pool[i]);
+                    if(!state.usedQids.includes(pool[i].id)) state.usedQids.push(pool[i].id);
+                }
+            }
+            
+            pick('quick', GAME_CONFIG.quickQuestions);
+            pick('activity', GAME_CONFIG.activityQuestions);
+            pick('situation', GAME_CONFIG.situationQuestions);
+            pick('gate', GAME_CONFIG.gateQuestions);
+            return queue;
+        }
+
+        function renderCurrentQuiz() {
+            if(currentQuizIndex >= currentQuizQueue.length) {
+                finishZone(); return;
+            }
+
+            const q = currentQuizQueue[currentQuizIndex];
+            currentRetryCount = 0;
+            
+            document.getElementById('quiz-progress-text').innerText = `${currentQuizIndex + 1} / ${currentQuizQueue.length}`;
+            
+            const stageNames = { 'quick': '1단계: 빠른 퀴즈 ⚡', 'activity': '2단계: 탐험 미션 🔍', 'situation': '3단계: 상황 해결 💡', 'gate': '4단계: 관문 돌파 🏰' };
+            document.getElementById('quiz-stage').innerText = isReviewMode ? "📝 복습 문제" : stageNames[q.stage];
+            document.getElementById('quiz-q-text').innerHTML = q.question;
+            
+            const area = document.getElementById('quiz-content-area');
+            area.innerHTML = '';
+            document.getElementById('btn-submit-quiz').style.display = 'none';
+
+            if(q.type === 'mcq' || q.type === 'situation') renderMCQ(q, area);
+            else if(q.type === 'ox') renderOX(q, area);
+            else if(q.type === 'categorize') renderCategorize(q, area);
+            else if(q.type === 'sequence') renderSequence(q, area);
+        }
+
+        /* ---------------------------------------------------------------------
+           유형별 렌더러
+           --------------------------------------------------------------------- */
+        function renderMCQ(q, container) {
+            const grid = document.createElement('div');
+            grid.className = 'options-grid';
+            
+            // 보기 셔플 (정답 인덱스 추적)
+            let ops = q.options.map((opt, idx) => ({ text: opt, originalIdx: idx }));
+            for(let i=ops.length-1; i>0; i--){ const j=Math.floor(Math.random()*(i+1)); [ops[i], ops[j]] = [ops[j], ops[i]]; }
+            
+            ops.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = `<span>${opt.text}</span>`;
+                btn.onclick = () => submitAnswer(opt.originalIdx === q.answer);
+                grid.appendChild(btn);
+            });
+            container.appendChild(grid);
+        }
+
+        function renderOX(q, container) {
+            const grid = document.createElement('div');
+            grid.className = 'options-grid';
+            const oBtn = document.createElement('button');
+            oBtn.className = 'option-btn'; oBtn.style.fontSize='4rem'; oBtn.style.color='#2196F3'; oBtn.innerHTML = 'O';
+            oBtn.onclick = () => submitAnswer(0 === q.answer);
+            
+            const xBtn = document.createElement('button');
+            xBtn.className = 'option-btn'; xBtn.style.fontSize='4rem'; xBtn.style.color='#F44336'; xBtn.innerHTML = 'X';
+            xBtn.onclick = () => submitAnswer(1 === q.answer);
+            
+            grid.appendChild(oBtn); grid.appendChild(xBtn);
+            container.appendChild(grid);
+        }
+
+        // 상태 변수 (분류/순서 제출용)
+        let interactiveState = null;
+
+        function renderCategorize(q, container) {
+            interactiveState = { items: [...q.items], placements: {} }; // itemIdx -> catIdx
+            const wrap = document.createElement('div'); wrap.className = 'cat-container';
+            
+            // 셔플 아이템 풀
+            const pool = document.createElement('div'); pool.className = 'cat-items';
+            let shuffledItems = q.items.map((it, idx) => ({...it, idx})).sort(()=>Math.random()-0.5);
+            
+            let selectedNode = null;
+            let selectedData = null;
+
+            shuffledItems.forEach(item => {
+                const pill = document.createElement('div'); pill.className = 'cat-item'; pill.innerText = item.text;
+                pill.onclick = () => {
+                    if(selectedNode) selectedNode.classList.remove('selected');
+                    pill.classList.add('selected');
+                    selectedNode = pill; selectedData = item;
+                };
+                pool.appendChild(pill);
+            });
+
+            // 카테고리 박스
+            const boxes = document.createElement('div'); boxes.className = 'cat-boxes';
+            q.categories.forEach((catText, catIdx) => {
+                const box = document.createElement('div'); box.className = 'cat-box';
+                box.innerHTML = `<div class="cat-box-title">${catText}</div>`;
+                
+                box.onclick = () => {
+                    if(selectedNode && selectedData) {
+                        interactiveState.placements[selectedData.idx] = catIdx;
+                        const placed = document.createElement('div'); placed.className = 'cat-item-placed'; placed.innerText = selectedData.text;
+                        box.appendChild(placed);
+                        selectedNode.remove(); // 풀에서 제거
+                        selectedNode = null; selectedData = null;
+                        
+                        if(Object.keys(interactiveState.placements).length === q.items.length) {
+                            document.getElementById('btn-submit-quiz').style.display = 'inline-flex';
+                        }
+                    }
+                };
+                boxes.appendChild(box);
+            });
+
+            wrap.appendChild(pool); wrap.appendChild(boxes);
+            container.appendChild(wrap);
+            
+            const guide = document.createElement('p'); guide.style.color='#666'; guide.innerText = "단어를 터치한 후, 알맞은 빈칸 상자를 터치하세요.";
+            container.appendChild(guide);
+        }
+
+        function renderSequence(q, container) {
+            interactiveState = { currentOrder: q.items.map((text, idx) => ({ text, originalIdx: idx })) };
+            // 초기 셔플
+            interactiveState.currentOrder.sort(()=>Math.random()-0.5);
+            
+            const wrap = document.createElement('div'); wrap.className = 'seq-container';
+            
+            function renderList() {
+                wrap.innerHTML = '';
+                interactiveState.currentOrder.forEach((item, arrIdx) => {
+                    const row = document.createElement('div'); row.className = 'seq-item';
+                    row.innerHTML = `<div class="seq-content"><span style="color:#aaa; margin-right:10px;">${arrIdx+1}.</span> ${item.text}</div>`;
+                    
+                    const controls = document.createElement('div'); controls.className = 'seq-controls';
+                    if(arrIdx > 0) {
+                        const up = document.createElement('button'); up.className='seq-btn'; up.innerText='▲';
+                        up.onclick = () => { 
+                            let temp = interactiveState.currentOrder[arrIdx-1];
+                            interactiveState.currentOrder[arrIdx-1] = interactiveState.currentOrder[arrIdx];
+                            interactiveState.currentOrder[arrIdx] = temp;
+                            renderList();
+                        };
+                        controls.appendChild(up);
+                    }
+                    if(arrIdx < interactiveState.currentOrder.length - 1) {
+                        const down = document.createElement('button'); down.className='seq-btn'; down.innerText='▼';
+                        down.onclick = () => { 
+                            let temp = interactiveState.currentOrder[arrIdx+1];
+                            interactiveState.currentOrder[arrIdx+1] = interactiveState.currentOrder[arrIdx];
+                            interactiveState.currentOrder[arrIdx] = temp;
+                            renderList();
+                        };
+                        controls.appendChild(down);
+                    }
+                    row.appendChild(controls);
+                    wrap.appendChild(row);
+                });
+            }
+            renderList();
+            container.appendChild(wrap);
+            document.getElementById('btn-submit-quiz').style.display = 'inline-flex';
+        }
+
+        function checkInteractiveAnswer() {
+            const q = currentQuizQueue[currentQuizIndex];
+            let isCorrect = true;
+            
+            if(q.type === 'categorize') {
+                for(let i=0; i<q.items.length; i++) {
+                    if(interactiveState.placements[i] !== q.items[i].c) { isCorrect = false; break; }
+                }
+            } else if(q.type === 'sequence') {
+                for(let i=0; i<q.answer.length; i++) {
+                    if(interactiveState.currentOrder[i].originalIdx !== q.answer[i]) { isCorrect = false; break; }
+                }
+            }
+            submitAnswer(isCorrect);
+        }
+
+        /* ---------------------------------------------------------------------
+           채점 및 피드백 로직
+           --------------------------------------------------------------------- */
+        const praises = ["정확해요!", "사회 탐험 실력이 대단해요!", "멋지게 해결했어요!", "완벽합니다!", "별을 선물할게요!"];
+        const cheers = ["조금만 더 생각해보세요.", "힌트를 확인해 볼까요?", "아쉽지만 다시 도전할 수 있어요.", "다음엔 꼭 맞힐 거예요!"];
+
+        function submitAnswer(isCorrect) {
+            const q = currentQuizQueue[currentQuizIndex];
+            
+            if (isCorrect) {
+                // 정답 처리
+                sfx.correct();
+                zoneCorrectCount++;
+                let pts = 0;
+                if(q.type==='mcq') pts=10; else if(q.type==='ox') pts=8; else if(q.stage==='situation') pts=15; else pts=12;
+                if(q.stage === 'gate') pts = 20;
+                
+                state.score += pts;
+                let addStars = currentRetryCount === 0 ? 2 : 1;
+                state.stars += addStars;
+                
+                // 복습소에서 맞춘 경우 배열에서 제거
+                if(isReviewMode) {
+                    state.wrongQids = state.wrongQids.filter(id => id !== q.id);
+                }
+
+                showModal(`⭕ 정답! (+${pts}점)`, `
+                    <div class="feedback-correct" style="font-size:1.5rem; font-weight:bold; margin-bottom:15px;">
+                        ${praises[Math.floor(Math.random()*praises.length)]} ⭐+${addStars}
+                    </div>
+                    <div style="background:#E8F5E9; padding:15px; border-radius:10px;">
+                        <strong>[해설]</strong><br>${q.exp}
+                    </div>
+                `, () => {
+                    currentQuizIndex++; renderCurrentQuiz();
+                });
+
+            } else {
+                // 오답 처리
+                sfx.wrong();
+                
+                // 오답 노트 기록 (처음 틀렸을 때만)
+                if(currentRetryCount === 0 && !state.wrongQids.includes(q.id)) {
+                    state.wrongQids.push(q.id);
+                }
+
+                if (currentRetryCount === 0 && q.hint && !isReviewMode) {
+                    // 첫 오답 + 힌트 제공 (복습소 제외)
+                    currentRetryCount++;
+                    showModal(`❌ 아쉬워요!`, `
+                        <div class="feedback-wrong" style="font-size:1.5rem; font-weight:bold; margin-bottom:15px;">
+                            ${cheers[Math.floor(Math.random()*cheers.length)]}
+                        </div>
+                        <div class="feedback-hint"><strong>💡 힌트:</strong> ${q.hint}</div>
+                        <div>포기하지 말고 한 번 더 도전해 보세요!</div>
+                    `); // 확인 누르면 모달만 닫힘 (재도전)
+                } else {
+                    // 두 번째 오답이거나 복습소거나 힌트가 없는 경우 -> 정답/해설 공개 후 넘어감
+                    showModal(`❌ 다음 기회에!`, `
+                        <div class="feedback-wrong" style="font-size:1.5rem; font-weight:bold; margin-bottom:15px;">
+                            해설을 읽고 꼭 기억해 두세요.
+                        </div>
+                        <div style="background:#FFEBEE; padding:15px; border-radius:10px;">
+                            <strong>[정답/해설]</strong><br>${q.exp}
+                        </div>
+                    `, () => {
+                        currentQuizIndex++; renderCurrentQuiz();
+                    });
+                }
+            }
+        }
+
+        /* ---------------------------------------------------------------------
+           지역 완료 처리 로직
+           --------------------------------------------------------------------- */
+        function finishZone() {
+            if (isReviewMode) {
+                // 복습 완료
+                saveGame();
+                updateMapUI();
+                document.getElementById('review-remain').innerText = state.wrongQids.length;
+                showModal("📝 복습 완료!", "선택한 복습 문제를 모두 확인했습니다.<br>탐험 지도로 돌아갑니다.", () => {
+                    showScreen('review-screen'); renderReviewList();
+                });
+                return;
+            }
+
+            // 일반 지역 완료
+            const total = currentQuizQueue.length;
+            const rate = Math.round((zoneCorrectCount / total) * 100);
+            
+            if (currentZoneId === 7) {
+                // 최종 보스 클리어
+                finishGame(rate);
+                return;
+            }
+
+            if (rate >= GAME_CONFIG.passRate) {
+                // 통과 (배지 계산)
+                sfx.badge();
+                let badgeType = '동';
+                if(rate >= 95) badgeType = '금'; else if(rate >= 85) badgeType = '은';
+                
+                state.zoneStatus[currentZoneId].cleared = true;
+                state.zoneStatus[currentZoneId].badge = badgeType;
+                
+                // 다음 지역 언락
+                if(currentZoneId < 6) state.zoneStatus[currentZoneId+1].locked = false;
+                
+                saveGame();
+                updateMapUI();
+
+                showModal(`🎉 ${currentZoneId}지역 탐험 완료!`, `
+                    <div style="font-size:3rem; margin:20px 0;">🏅 ${badgeType} 배지 획득!</div>
+                    <div style="font-size:1.2rem;">정답률: ${rate}%<br>탐험 지도 조각을 1개 찾았습니다! 🧩</div>
+                `, () => showScreen('map-screen'));
+            } else {
+                // 실패
+                showModal(`⚠️ 탐험 실패`, `
+                    <div style="font-size:1.2rem; color:red;">정답률: ${rate}% (목표: ${GAME_CONFIG.passRate}% 이상)</div>
+                    <div style="margin-top:15px;">복습이 조금 더 필요해요.<br>지도로 돌아가서 다시 도전해 주세요!</div>
+                `, () => showScreen('map-screen'));
+            }
+        }
+
+        function confirmExitQuiz() {
+            if(confirm("탐험을 중단하고 지도로 돌아갈까요?\n현재 지역의 진행 상황은 저장되지 않습니다.")) {
+                showScreen('map-screen');
+            }
+        }
+
+        /* =====================================================================
+           8. 틀린 문제 복습소
+           ===================================================================== */
+        function openReviewStation() {
+            renderReviewList();
+            showScreen('review-screen');
+        }
+
+        function renderReviewList() {
+            const container = document.getElementById('review-list-container');
+            document.getElementById('review-remain').innerText = state.wrongQids.length;
+            container.innerHTML = '';
+
+            if(state.wrongQids.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:50px; font-size:1.5rem; color:#666;">✨ 틀린 문제가 없습니다! 완벽해요! ✨</div>`;
+                return;
+            }
+
+            const playAllBtn = document.createElement('button');
+            playAllBtn.className = 'btn'; playAllBtn.style.background = '#4CAF50'; playAllBtn.style.color = '#fff'; playAllBtn.innerText = "전체 복습 시작 ▶";
+            playAllBtn.onclick = () => startReviewSession(state.wrongQids);
+            container.appendChild(playAllBtn);
+
+            state.wrongQids.forEach(qid => {
+                const q = questionBank.find(item => item.id === qid);
+                if(!q) return;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'review-item';
+                itemDiv.innerHTML = `
+                    <div style="flex-grow:1;">
+                        <span style="background:var(--color-z${q.zone}); color:#fff; padding:3px 8px; border-radius:5px; font-size:0.9rem; margin-right:10px;">${q.zone}지역</span>
+                        <strong style="font-size:1.1rem;">${q.question.substring(0, 30)}...</strong>
+                    </div>
+                    <button class="btn" style="padding:10px 15px; font-size:1rem;" onclick="startReviewSession(['${q.id}'])">풀기</button>
+                `;
+                container.appendChild(itemDiv);
+            });
+        }
+
+        function startReviewSession(qids) {
+            isReviewMode = true;
+            currentQuizQueue = qids.map(id => questionBank.find(q => q.id === id)).filter(Boolean);
+            currentQuizIndex = 0;
+            document.getElementById('quiz-zone-name').innerText = "복습소";
+            showScreen('quiz-screen');
+            renderCurrentQuiz();
+        }
+
+        /* =====================================================================
+           10. 최종 결과 및 수료증
+           ===================================================================== */
+        function finishGame(finalRate) {
+            sfx.unlock();
+            state.playTime += state.startTime ? (Date.now() - state.startTime) / 1000 : 0;
+            state.startTime = null; // 타이머 멈춤
+            saveGame();
+
+            // 호칭 결정 로직
+            let title = "성장하는 탐험대원";
+            if(finalRate >= 95) title = "사회 탐험 최고 전문가";
+            else if(finalRate >= 85) title = "사회 탐험 박사";
+            else if(finalRate >= 70) title = "사회 탐험 대장";
+
+            document.getElementById('res-title').innerText = title;
+            document.getElementById('cert-title-text').innerText = title;
+            document.getElementById('res-name').innerText = state.userName;
+            document.getElementById('cert-name').innerText = state.userName;
+            document.getElementById('res-score').innerText = state.score;
+            document.getElementById('cert-score').innerText = state.score;
+            document.getElementById('res-stars').innerText = state.stars;
+            document.getElementById('res-rate').innerText = finalRate + "%";
+            document.getElementById('cert-rate').innerText = finalRate;
+
+            // 잘한 구역 로직 (단순화: 배지 기준)
+            let bestStr = "1지역", worstStr = "없음";
+            let bestVal = 0, worstVal = 4; // 1:동, 2:은, 3:금
+            
+            for(let i=1; i<=6; i++) {
+                let v = 0;
+                if(state.zoneStatus[i].badge==='금') v=3; else if(state.zoneStatus[i].badge==='은') v=2; else if(state.zoneStatus[i].badge==='동') v=1;
+                if(v > bestVal) { bestVal = v; bestStr = `${i}지역`; }
+                if(v > 0 && v < worstVal) { worstVal = v; worstStr = `${i}지역`; }
+            }
+            if(bestVal===0) bestStr="정보 부족";
+            if(worstVal===3) worstStr="모두 완벽해요!";
+
+            document.getElementById('res-best').innerText = bestStr;
+            document.getElementById('res-worst').innerText = worstStr;
+            
+            let badgesCount = Object.values(state.zoneStatus).filter(z=>z.cleared).length;
+            document.getElementById('cert-badges').innerText = badgesCount;
+
+            showScreen('result-screen');
+            createConfetti();
+        }
+
+        // 폭죽 효과 (CSS 기반 가벼운 애니메이션)
+        function createConfetti() {
+            const colors = ['#fce18a', '#ff726d', '#b48def', '#f4306d'];
+            for(let i=0; i<50; i++) {
+                const conf = document.createElement('div');
+                conf.style.position = 'absolute';
+                conf.style.width = '10px'; conf.style.height = '10px';
+                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                conf.style.left = Math.random() * 100 + 'vw';
+                conf.style.top = '-10px';
+                conf.style.zIndex = '999';
+                conf.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                
+                const duration = Math.random() * 3 + 2;
+                conf.style.animation = `fall ${duration}s linear forwards`;
+                
+                document.getElementById('result-screen').appendChild(conf);
+                
+                setTimeout(() => conf.remove(), duration * 1000);
+            }
+        }
+
+        // 동적 CSS 추가 (폭죽용)
+        const style = document.createElement('style');
+        style.innerHTML = `@keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }`;
+        document.head.appendChild(style);
+
+        /* =====================================================================
+           유틸: 커스텀 모달
+           ===================================================================== */
+        let modalCallback = null;
+        function showModal(title, text, callback=null) {
+            document.getElementById('modal-title').innerHTML = title;
+            document.getElementById('modal-body').innerHTML = text;
+            document.getElementById('modal').style.display = 'flex';
+            modalCallback = callback;
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            if(modalCallback) {
+                let cb = modalCallback;
+                modalCallback = null; // 연쇄 호출 방지
+                cb();
+            }
+        }
+
+    </script>
+</body>
+</html>
